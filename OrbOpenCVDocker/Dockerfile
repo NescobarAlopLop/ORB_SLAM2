@@ -77,6 +77,6 @@ RUN cd && cd Pangolin && mkdir build && cd build && cmake .. && make -j
 RUN cd && git clone https://github.com/raulmur/ORB_SLAM2.git ORB_SLAM2
 RUN cd && cd ORB_SLAM2 && chmod +x ./build.sh && ./build.sh
 
-
+#RUN pkexec env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY nautilus
 # ENV HOME /home/developer
 ENV HOME /root/ORB_SLAM2
