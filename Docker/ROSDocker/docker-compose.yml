@@ -3,6 +3,11 @@ services:
   master:
     build: .
     container_name: master
+    environment:
+      - "DISPLAY"
+      - "QT_X11_NO_MITSHM=1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command:
       - roscore
 
@@ -12,6 +17,10 @@ services:
     environment:
       - "ROS_HOSTNAME=talker"
       - "ROS_MASTER_URI=http://master:11311"
+      - "DISPLAY"
+      - "QT_X11_NO_MITSHM=1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: rosrun roscpp_tutorials talker
 
   listener:
@@ -20,7 +29,8 @@ services:
     environment:
       - "ROS_HOSTNAME=listener"
       - "ROS_MASTER_URI=http://master:11311"
+      - "DISPLAY"
+      - "QT_X11_NO_MITSHM=1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: rosrun roscpp_tutorials listener
-
-#networks:
-#  foo

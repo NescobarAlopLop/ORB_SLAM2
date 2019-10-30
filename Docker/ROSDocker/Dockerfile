@@ -58,13 +58,37 @@ RUN cd ~ && \
     make -j4 && \
     make install
 
+
 # copy ORB-SLAM2 from current directory
-#ADD ../../../ORB_SLAM2/ /home
-RUN cd ~ && \
+RUN printenv | grep ROS
+RUN /bin/bash -c 'source /opt/ros/melodic/setup.bash; \
+    mkdir -p ~/catkin_ws/src; \
+    cd ~/catkin_ws/; \
+    catkin_make; \
+    source devel/setup.bash'
+
+RUN cd ~/catkin_ws/src/ && \
     git clone https://github.com/NescobarAlopLop/ORB_SLAM2.git && \
     cd ORB_SLAM2 && \
     chmod +x build.sh && \
     ./build.sh
+#     && \
+#    chmod +x build_ros.sh && \
+#    ./build_ros.sh
+
+## Install desktop environment
+#RUN apt-get install -y xserver-xorg-core \
+#    xinit lxsession desktop-file-utils \
+##     rpd-icons \
+##    gtk2-engines-clearlookspix \
+#    matchbox-keyboard
+#
+## disable lxpolkit popup warning
+#RUN mv /usr/bin/lxpolkit /usr/bin/lxpolkit.bak
+
+#RUN echo "#!/bin/bash" > /etc/X11/xinit/xserverrc \
+#  && echo "" >> /etc/X11/xinit/xserverrc \
+#  && echo 'exec /usr/bin/X -s 0 dpms -nolisten tcp "$@"' >> /etc/X11/xinit/xserverrc
 
 # setup entrypoint
 COPY ./ros_entrypoint.sh /
