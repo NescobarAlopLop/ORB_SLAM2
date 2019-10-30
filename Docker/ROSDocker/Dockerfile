@@ -113,6 +113,7 @@ RUN echo  $ROS_PACKAGE_PATH
 #  && echo 'exec /usr/bin/X -s 0 dpms -nolisten tcp "$@"' >> /etc/X11/xinit/xserverrc
 
 # setup entrypoint
+COPY ./test_webcam.py /
 COPY ./ros_entrypoint.sh /
 RUN chmod +x /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]

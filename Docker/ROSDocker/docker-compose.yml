@@ -22,6 +22,8 @@ services:
       - "QT_X11_NO_MITSHM=1"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/video0:/dev/video0
     command: rosrun roscpp_tutorials talker
 
   listener:
