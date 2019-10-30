@@ -1,13 +1,14 @@
 #FROM        ubuntu:16.04
 FROM opless/ubuntu-16.04-opencv-3.2.0
 MAINTAINER  George Kesaev
-ENV TZ=Israel/Haifa
+
+# ENV TZ=Israel/Haifa
 # ENV TZ=America/Los_Angeles
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 #install opencv
-#RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get -y update
+RUN apt-get -y update && apt-get -y upgrade
+# RUN apt-get -y update
 RUN apt-get -y install build-essential wget nano 
 # RUN apt-get -y install build-essential perl wget nano
 RUN apt-get -y install cmake git libgtk2.0-dev pkg-config libavutil-dev libpostproc-dev libavdevice-dev libsdl-dev
