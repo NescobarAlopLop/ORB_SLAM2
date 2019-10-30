@@ -25,6 +25,7 @@ mkdir build
 cd build
 cmake ..
 make -j4
+make install
 echo "finished making Pangolin"
 
 
@@ -55,7 +56,7 @@ mkdir ~/ros_catkin_ws
 cd ~/ros_catkin_ws
 
 rosinstall_generator desktop --rosdistro melodic --deps --wet-only --tar > melodic-desktop-wet.rosinstall
-wstool init -j8 src melodic-desktop-wet.rosinstall
+wstool init -j4 src melodic-desktop-wet.rosinstall
 
 # if error continuew with this command
 # wstool update -j 4 -t src
@@ -107,7 +108,7 @@ sudo ./src/catkin/bin/catkin_make_isolated --install -DCMAKE_BUILD_TYPE=Release 
 
 
 echo "[ ** ] Finished ROS install"
-echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc 
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 
 sudo apt-get install python-empy
@@ -143,7 +144,7 @@ make
 sudo make install
 
 exit(1)
-echo "clean examples from makefile, didn't compile for me"
+echo "clean examples from makefile, didn\'t compile for me"
 
 
 
