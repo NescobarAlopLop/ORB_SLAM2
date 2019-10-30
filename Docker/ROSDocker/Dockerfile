@@ -42,11 +42,6 @@ RUN apt-get update && apt-get install -y \
     ros-melodic-ros-core=1.4.1-0* \
     && rm -rf /var/lib/apt/lists/*
 
-
-# setup entrypoint
-COPY ./ros_entrypoint.sh /
-RUN chmod +x /ros_entrypoint.sh
-
 # installing more deps
 RUN apt-get update && apt-get install -y libeigen3-dev libblas-dev liblapack-dev libglew-dev
 
@@ -63,5 +58,16 @@ RUN cd ~ && \
     make -j4 && \
     make install
 
+# copy ORB-SLAM2 from current directory
+#ADD ../../../ORB_SLAM2/ /home
+RUN cd ~ && \
+    git clone https://github.com/NescobarAlopLop/ORB_SLAM2.git && \
+    cd ORB_SLAM2 && \
+    chmod +x build.sh && \
+    ./build.sh
+
+# setup entrypoint
+COPY ./ros_entrypoint.sh /
+RUN chmod +x /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
