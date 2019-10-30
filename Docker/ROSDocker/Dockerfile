@@ -72,9 +72,31 @@ RUN cd ~/catkin_ws/src/ && \
     cd ORB_SLAM2 && \
     chmod +x build.sh && \
     ./build.sh
-#     && \
-#    chmod +x build_ros.sh && \
-#    ./build_ros.sh
+
+RUN apt-get install -y ros-melodic-rqt-tf-tree
+
+#ENV ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/catkin_ws/src/ORB_SLAM2/Examples/ROS
+#RUN export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/catkin_ws/src/ORB_SLAM2/Examples/ROS && \
+#RUN echo $ROS_PACKAGE_PATH
+ENV ROS_PACKAGE_PATH=/opt/ros/melodic/share:~/catkin_ws/src/ORB_SLAM2/Examples/ROS:~/catkin_ws/src
+#RUN echo $ROS_PACKAGE_PATH
+#RUN roscore
+#RUN rosrun tf tf_monitor
+#RUN apt install -y ros-melodic-desktop-full
+RUN apt install -y ros-melodic-desktop
+
+#RUN /bin/bash -c 'export ROS_PACKAGE_PATH=/opt/ros/melodic/share:~/catkin_ws/src/ORB_SLAM2/Examples/ROS:~/catkin_ws/src && \
+RUN /bin/bash -c 'echo  $ROS_PACKAGE_PATH && \
+    cd ~/catkin_ws/ && \
+    source devel/setup.bash && \
+    cd src/ORB_SLAM2 && \
+    chmod +x build_ros.sh && \
+    ./build_ros.sh'
+RUN echo  $ROS_PACKAGE_PATH
+
+#source /opt/ros/melodic/setup.bash && \
+
+#    rosdep update; \
 
 ## Install desktop environment
 #RUN apt-get install -y xserver-xorg-core \
