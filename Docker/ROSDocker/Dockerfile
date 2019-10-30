@@ -46,5 +46,22 @@ RUN apt-get update && apt-get install -y \
 # setup entrypoint
 COPY ./ros_entrypoint.sh /
 RUN chmod +x /ros_entrypoint.sh
+
+# installing more deps
+RUN apt-get update && apt-get install -y libeigen3-dev libblas-dev liblapack-dev libglew-dev
+
+# installing opencv
+RUN apt-get -y install libopencv-dev python3-opencv
+
+# installing Pangolin
+RUN cd ~ && \
+    git clone https://github.com/stevenlovegrove/Pangolin && \
+    cd Pangolin && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j4 && \
+    make install
+
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
