@@ -47,8 +47,8 @@ zeros = [0] * 3
 
 CLOSE_THRESHOLD = 0.05
 
-SAVE_LOC1 = r'Data/drone_frame1.png'
-SAVE_LOC2 = r'Data/drone_frame2.png'
+SAVE_LOC1 = r'/tmp/drone_frame1.png'
+SAVE_LOC2 = r'/tmp/drone_frame2.png'
 SAVE_FPS = 25
 
 
@@ -362,6 +362,9 @@ class FrontEnd(object):
 
             # Call it always before finishing. I deallocate resources.
             self.tello.end()
+        except KeyboardInterrupt:
+            print('exiting')
+            raise KeyboardInterrupt
         finally:
             time.sleep(1 / FPS)
             print("Landing")
