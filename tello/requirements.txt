@@ -2,3 +2,6 @@ opencv-python
 djitellopy
 tellopy
 av
+opencv-contrib-python
+Pillow
+rospkg
