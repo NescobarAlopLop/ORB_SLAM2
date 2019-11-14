@@ -114,4 +114,5 @@ target_link_libraries(mono_euroc ${PROJECT_NAME})
 
 add_executable(mono_tello
         Examples/Monocular/mono_tello.cc)
-target_link_libraries(mono_tello ${PROJECT_NAME})
+target_link_libraries(mono_tello PUBLIC ${PROJECT_NAME})
+target_compile_options(mono_tello PRIVATE -Wall -Wno-deprecated-declarations) #-Werror -Wall -Wextra)
