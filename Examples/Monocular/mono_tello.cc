@@ -33,6 +33,12 @@
 #include <unistd.h>
 #include<System.h>
 
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <iostream>
+
+
 using namespace std;
 
 void LoadImages(const string &strImagePath, const string &strPathTimes,
@@ -42,120 +48,65 @@ int main(int argc, char **argv)
 {
     if(argc != 4)
     {
-        cerr << endl << "Usage: ./mono_tello path_to_vocabulary path_to_settings video_source"
+        cerr << endl << "Usage: ./mono_tello path_to_vocabulary path_to_settings"
                         " (/dev/videox -> x, rdp stream -> full url)" << endl;
+        cout << "Example command: ./mono_tello ../../Vocabulary/ORBvoc.txt tello.yaml" << endl;
         return 1;
     }
 
-    // Retrieve paths to images
-    vector<string> vstrImageFilenames;
-    vector<double> vTimestamps;
-    LoadImages(string(argv[3]), string(argv[4]), vstrImageFilenames, vTimestamps);
-
-    int nImages = vstrImageFilenames.size();
-
-    if(nImages<=0)
-    {
-        cerr << "ERROR: Failed to load images" << endl;
-        return 1;
-    }
+    auto rows = 720;
+    auto cols = 960;
+    auto colors = 3;
+    auto fps = 30;
+    auto sizeOfData = rows * cols * colors;            // TODO: move magic numbers to config file
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
 
-    // Vector for tracking time statistics
-    vector<float> vTimesTrack;
-    vTimesTrack.resize(nImages);
+    const char *fifo_name = "/tmp/images.fifo";
+    std::ifstream fifo;
+    char buf[sizeOfData];
+    cv::namedWindow( "read from pipe", CV_WINDOW_AUTOSIZE );
 
-    cout << endl << "-------" << endl;
-    cout << "Start processing sequence ..." << endl;
-    cout << "Images in the sequence: " << nImages << endl << endl;
-
+    cout << "Start processing video from named pipe ..." << endl;
     // Main loop
-    cv::Mat im;
-    for(int ni=0; ni<nImages; ni++)
+    for(; ; )
     {
-        // Read image from file
-        im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
-        double tframe = vTimestamps[ni];
+        fifo.open(fifo_name, std::ios_base::in);
 
-        if(im.empty())
-        {
-            cerr << endl << "Failed to load image at: "
-                 <<  vstrImageFilenames[ni] << endl;
-            return 1;
+        // Read image from pipe
+        fifo.read(buf, sizeOfData);
+        if (!fifo.good()) {
+            std::cerr << "Read failed" << std::endl;
+            fifo.close();
+            continue;
         }
 
-#ifdef COMPILEDWITHC11
-        std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-#else
-        std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
-#endif
+        // Read image from buf to cvmat
+        cv::Mat imageWithData2 = cv::Mat(rows, cols, CV_8UC3, buf);//.clone();
+        fifo.close();
+
+        cv::imshow("read from pipe", imageWithData2);
+        if(cv::waitKey(1) == 27) // Wait for 'esc' key press to exit
+        {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000/fps));
+
+        double tframe = 0.2;        // TODO: magic number fix according to original mono
 
         // Pass the image to the SLAM system
-        SLAM.TrackMonocular(im,tframe);
+        SLAM.TrackMonocular(imageWithData2,tframe);
 
-#ifdef COMPILEDWITHC11
-        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-#else
-        std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
-#endif
-
-        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-
-        vTimesTrack[ni]=ttrack;
-
-        // Wait to load the next frame
-        double T=0;
-        if(ni<nImages-1)
-            T = vTimestamps[ni+1]-tframe;
-        else if(ni>0)
-            T = tframe-vTimestamps[ni-1];
-
-        if(ttrack<T)
-            usleep((T-ttrack)*1e6);
     }
 
     // Stop all threads
     SLAM.Shutdown();
 
-    // Tracking time statistics
-    sort(vTimesTrack.begin(),vTimesTrack.end());
-    float totaltime = 0;
-    for(int ni=0; ni<nImages; ni++)
-    {
-        totaltime+=vTimesTrack[ni];
-    }
-    cout << "-------" << endl << endl;
-    cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
-    cout << "mean tracking time: " << totaltime/nImages << endl;
+    cvDestroyAllWindows();
 
     // Save camera trajectory
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
     return 0;
-}
-
-void LoadImages(const string &strImagePath, const string &strPathTimes,
-                vector<string> &vstrImages, vector<double> &vTimeStamps)
-{
-    ifstream fTimes;
-    fTimes.open(strPathTimes.c_str());
-    vTimeStamps.reserve(5000);
-    vstrImages.reserve(5000);
-    while(!fTimes.eof())
-    {
-        string s;
-        getline(fTimes,s);
-        if(!s.empty())
-        {
-            stringstream ss;
-            ss << s;
-            vstrImages.push_back(strImagePath + "/" + ss.str() + ".png");
-            double t;
-            ss >> t;
-            vTimeStamps.push_back(t/1e9);
-
-        }
-    }
 }
