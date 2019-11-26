@@ -43,6 +43,7 @@ public:
     ORB_SLAM2::System* mpSLAM;
 };
 
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "Mono");
@@ -61,7 +62,13 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+//    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    std::string topic = "/tello/image_raw";
+    ros::Subscriber sub = nodeHandler.subscribe(topic, 1, &ImageGrabber::GrabImage,&igb);
+    ROS_INFO_STREAM("Saving map to \"" << topic << "\".");
+
+    ROS_INFO("======================>> ");
+    std::cout << "TOPIC IS " << topic << std::endl;
 
     ros::spin();
 
@@ -76,6 +83,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
+# TODO: switch image grabber from cv_bridge to cap open mjpeg
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
     // Copy the ros image message to cv::Mat.
@@ -92,5 +100,3 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 
     mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
 }
-
-

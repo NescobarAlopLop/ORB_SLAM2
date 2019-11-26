@@ -46,7 +46,7 @@ void LoadImages(const string &strImagePath, const string &strPathTimes,
 
 int main(int argc, char **argv)
 {
-    if(argc != 4)
+    if(argc != 3)
     {
         cerr << endl << "Usage: ./mono_tello path_to_vocabulary path_to_settings"
                         " (/dev/videox -> x, rdp stream -> full url)" << endl;
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     auto rows = 720;
     auto cols = 960;
     auto colors = 3;
-    auto fps = 30;
+    auto fps = 25;
     auto sizeOfData = rows * cols * colors;            // TODO: move magic numbers to config file
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.

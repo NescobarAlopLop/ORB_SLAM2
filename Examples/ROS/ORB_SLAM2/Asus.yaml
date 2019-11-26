@@ -19,6 +19,7 @@ Camera.width: 640
 Camera.height: 480
 
 # Camera frames per second 
+#Camera.fps: 30.0
 Camera.fps: 30.0
 
 # IR projector baseline times fx (aprox.)
@@ -38,7 +39,8 @@ DepthMapFactor: 1.0
 #--------------------------------------------------------------------------------------------
 
 # ORB Extractor: Number of features per image
-ORBextractor.nFeatures: 1000
+#ORBextractor.nFeatures: 1000
+ORBextractor.nFeatures: 800
 
 # ORB Extractor: Scale factor between levels in the scale pyramid 	
 ORBextractor.scaleFactor: 1.2
