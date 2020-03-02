@@ -23,3 +23,5 @@ build/
 lib/
 
 .idea/
+venv
+cmake-build-debug
