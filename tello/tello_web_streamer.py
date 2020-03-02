@@ -29,16 +29,6 @@ lock = threading.Lock()
 should_stop = False
 
 
-def is_tello_connected(tello_ssid: str='tello'):
-    import os
-    iwconfig_res = os.popen('iwconfig').read().lower()
-
-    for line in iwconfig_res.split('\n'):
-        if tello_ssid in line:
-            return True
-    return False
-
-
 class FrontEnd(object):
     """ Maintains the Tello display and moves it through the keyboard keys.
         Press escape key to quit.
