@@ -1,7 +1,10 @@
+numpy
 opencv-python
-djitellopy
-tellopy
-av
 opencv-contrib-python
+djitellopy
+# tellopy
 Pillow
-rospkg
+# rospkg
+# python-wifi
+flask
+av
