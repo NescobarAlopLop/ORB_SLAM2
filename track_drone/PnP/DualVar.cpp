@@ -11,8 +11,10 @@
 
 namespace PnP
 {
-	std::optional<std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double>>
-	DualVar::convert_to_rotation_translation_cost(const std::shared_ptr<PnpObjective>& objective,
+//	convert_to_rotation_translation_cost is not in use and had std::optional definitions which are not supported
+// in C11, so I've made some changes which to calm down compiler, first return statement should be either fixed to optional
+// or checked as error by the calle. Since no one using this function this comment was added here as a reminder
+	std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double> DualVar::convert_to_rotation_translation_cost(const std::shared_ptr<PnpObjective>& objective,
 		const std::shared_ptr<BarrierMethodSettings>& settings)
 	{
 		auto& M = objective->M;
@@ -37,13 +39,13 @@ namespace PnP
 		auto rotation_error = (rotation * rotation.transpose() - ColMatrix<3, 3>::Identity()).lpNorm<1>();
 
 		if (rotation_error > settings->valid_result_threshold)
-			return std::nullopt;
+			return std::make_tuple(Eigen::Matrix3d(), Eigen::Vector3d(), 0.0);
 
 		Eigen::Map<ColVector<9>> rotation_vec(rotation.data(), 9);
 
 		auto translation = T * rotation_vec;
 		auto sum_cost = (rotation_vec.transpose() * M * rotation_vec).eval()(0, 0);
-		return std::make_optional(std::make_tuple(rotation, translation, sum_cost / sum_weights));
+		return std::make_tuple(rotation, translation, sum_cost / sum_weights);
 	}
 
 	Eigen::Vector4d DualVar::extract_quaternions()
