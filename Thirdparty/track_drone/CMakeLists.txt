@@ -8,7 +8,7 @@ set(MKLROOT "/home/firas/intel/compilers_and_libraries_2020.1.217/linux/mkl/")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ltbb -D__STDC_CONSTANT_MACROS")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   -std=c++11 -pthread")
 #set(target firas_)
-find_package( OpenCV 4.4.0 REQUIRED )
+find_package( OpenCV 3.2.0 REQUIRED )
 set(sample_pnplib
         ${sample_dir}motion_vectors.cpp
         ${sample_dir}Utils.cpp
