@@ -122,6 +122,11 @@ add_executable(mono_euroc
 Examples/Monocular/mono_euroc.cc)
 target_link_libraries(mono_euroc ${PROJECT_NAME})
 
+add_executable(camera_finder
+        Thirdparty/cv_camera_finder.cpp
+  )
+target_link_libraries(camera_finder ${PROJECT_NAME})
+
 
 set(sample_pnplib
         ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/motion_vectors.cpp
