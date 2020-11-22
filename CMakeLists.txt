@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.16.2)
 project(ORB_SLAM2)
 
 IF(NOT CMAKE_BUILD_TYPE)
@@ -6,6 +6,9 @@ IF(NOT CMAKE_BUILD_TYPE)
 ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall   -O3 -march=native")
@@ -44,6 +47,9 @@ ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
 ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
+${PROJECT_SOURCE_DIR}/Thirdparty/track_drone
+${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP
+${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Utils_pnp
 )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
@@ -115,3 +121,53 @@ add_executable(mono_euroc
 Examples/Monocular/mono_euroc.cc)
 target_link_libraries(mono_euroc ${PROJECT_NAME})
 
+
+set(sample_pnplib
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/motion_vectors.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Utils.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Product.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnPProblem.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/RobustMatcher.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/frame.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Utils.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Projection.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/PnpInput.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Utils_pnp/Parsing.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/PnpObjective.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/PnpProblemSolver.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/DualVar.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/PnpBarrierMethodSolver.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Utils_pnp/GeneralUtils.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/PnpResult.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/PnpLocalSearch.cpp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP/QuaternionVector.cpp
+        )
+ocv_include_modules_recurse(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+
+add_executable(main
+        Examples/Monocular/main.cpp
+        ${sample_pnplib})
+include_directories(
+        ${OpenCV_INCLUDE_DIRS}
+        ${EIGEN3_INCLUDE_DIR}
+)
+include_directories(
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/Utils_pnp
+        ${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/PnP
+)
+include_directories(
+        -Idependencies/include
+        -Ldependencies/lib
+)
+
+
+
+target_link_libraries(
+        ${PROJECT_NAME}
+        ${OpenCV_LIBS}
+        stdc++fs -ltbb -lstdc++ -lpthread -lm -ldl -lswscale
+        -lavformat -lavcodec -lswresample -lavutil -lpthread
+        -lz -lc -lrt
+)
+
+target_link_libraries(main ${PROJECT_NAME} ${OpenCV_LIBS} stdc++fs -ltbb -lstdc++ -lpthread -lm -ldl -lswscale -lavformat -lavcodec -lswresample -lavutil -lpthread -lz -lc -lrt)

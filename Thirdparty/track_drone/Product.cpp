@@ -18,7 +18,7 @@ Product::Product(const string& barcode, bool with_color, const string& folder_pa
 
 	cout << "Reading:" << endl;
 	cv::FileStorage descriptorsfile;
-	descriptorsfile.open(folder_path + barcode + "_descriptors" + ".xml", cv::FileStorage::READ);
+	descriptorsfile.open("/home/george/Documents/ORB_SLAM2/Thirdparty/track_drone/Maps/new_drone_reg_descriptors.xml", cv::FileStorage::READ);
 	try
 	{
 		if (!descriptorsfile.isOpened())
@@ -29,15 +29,17 @@ Product::Product(const string& barcode, bool with_color, const string& folder_pa
 	}
 	catch (int err)
 	{
-		cout << "wrong descriptors File !!!! \n" << err;
+		cerr << "wrong descriptors File !!!! \n" << err;
 
 	}
 	cv::Mat pose2;
-	point3dfile.open(folder_path + barcode + "_points" + ".csv");
+//	point3dfile.open(folder_path + barcode + "_points" + ".csv");
+	point3dfile.open("/home/george/Documents/ORB_SLAM2/Thirdparty/track_drone/Maps/new_drone_reg_points.csv");
 	if (with_color)
-		colorfile.open(folder_path + barcode + "_colors" + ".csv");
+//		colorfile.open(folder_path + barcode + "_colors" + ".csv");
+		colorfile.open("/home/george/Documents/ORB_SLAM2/Thirdparty/track_drone/Maps/new_drone_reg_colors.csv");
 	else
-		colorfile.open(folder_path + barcode + "_points" + ".csv");
+		colorfile.open("/home/george/Documents/ORB_SLAM2/Thirdparty/track_drone/Maps/new_drone_reg_points.csv");
 
 	string mapERROR = "wrong 3d map file\n";
 	try
