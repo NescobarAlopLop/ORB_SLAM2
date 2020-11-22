@@ -143,7 +143,8 @@ protected:
     bool mbFixScale;
 
 
-    bool mnFullBAIdx;
+    int mnFullBAIdx;
+//    bool mnFullBAIdx;
 };
 
 } //namespace ORB_SLAM
