@@ -38,6 +38,11 @@
 #include "MapDrawer.h"
 #include "System.h"
 
+#include "PnpProblemSolver.h"
+#include "BarrierMethodSettings.h"
+#include <opencv2/core/eigen.hpp>
+
+
 #include <mutex>
 
 namespace ORB_SLAM2
@@ -133,6 +138,7 @@ protected:
     bool TrackWithMotionModel();
 
     bool Relocalization();
+    bool RelocalizationNewPnP();
 
     void UpdateLocalMap();
     void UpdateLocalPoints();

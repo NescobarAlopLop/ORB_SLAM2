@@ -293,6 +293,8 @@ namespace ORB_SLAM2
         {
             // System is initialized. Track Frame.
             bool bOK;
+            bool new_bOK;
+            bool old_bOK;
 
             // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
             if(!mbOnlyTracking)
@@ -318,7 +320,29 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-                    bOK = Relocalization();
+//					auto tmp_mCurrentFrame = Frame(mCurrentFrame);
+//
+//					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//
+//                    old_bOK = Relocalization();
+//
+//					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//
+//					mCurrentFrame = tmp_mCurrentFrame;
+
+					std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
+
+                    new_bOK = RelocalizationNewPnP();
+
+					std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
+					bOK = old_bOK || new_bOK;
+					cout << "agreeing: "<< (old_bOK == new_bOK) << "\tnew: " << new_bOK << " vs. old: " << old_bOK << endl;
+					std::cout << std::fixed << std::setprecision(9) << std::left;
+//					std::chrono::duration<double> old_time = t2 - t1;
+					std::chrono::duration<double> new_time = t4 - t3;
+//					cout << "time for old pnp: " << old_time.count() << endl;
+//					cout << "time for new pnp: " << new_time.count() << endl << endl;
+//					cout << "new is faster " << (new_time.count() < old_time.count()) << endl;
                 }
             }
             else
@@ -327,7 +351,30 @@ namespace ORB_SLAM2
 
                 if(mState==LOST)
                 {
-                    bOK = Relocalization();
+//					auto tmp_mCurrentFrame = Frame(mCurrentFrame);
+//
+//					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//
+//					old_bOK = Relocalization();
+//
+//					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//
+//					mCurrentFrame = tmp_mCurrentFrame;
+
+					std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
+
+					new_bOK = RelocalizationNewPnP();
+
+					std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
+
+					bOK = old_bOK || new_bOK;
+					cout << "agreeing: "<< (old_bOK == new_bOK) << "\tnew: " << new_bOK << " vs. old: " << old_bOK << endl;
+					std::cout << std::fixed << std::setprecision(9) << std::left;
+//					std::chrono::duration<double> old_time = t2 - t1;
+					std::chrono::duration<double> new_time = t4 - t3;
+//					cout << "time for old pnp: " << old_time.count() << endl;
+//					cout << "time for new pnp: " << new_time.count() << endl << endl;
+//					cout << "new is faster " << (new_time.count() < old_time.count()) << endl;
                 }
                 else
                 {
@@ -354,6 +401,8 @@ namespace ORB_SLAM2
 
                         bool bOKMM = false;
                         bool bOKReloc = false;
+                        bool new_bOKReloc = false;
+                        bool old_bOKReloc = false;
                         vector<MapPoint*> vpMPsMM;
                         vector<bool> vbOutMM;
                         cv::Mat TcwMM;
@@ -364,7 +413,30 @@ namespace ORB_SLAM2
                             vbOutMM = mCurrentFrame.mvbOutlier;
                             TcwMM = mCurrentFrame.mTcw.clone();
                         }
-                        bOKReloc = Relocalization();
+//                        auto tmp_mCurrentFrame = Frame(mCurrentFrame);
+//
+//						std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//
+//						old_bOKReloc = Relocalization();
+//
+//						std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//
+//						mCurrentFrame = tmp_mCurrentFrame;
+
+						std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
+
+						new_bOKReloc = RelocalizationNewPnP();
+
+						std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
+
+
+						bOKReloc = old_bOKReloc || new_bOKReloc;
+						cout << "agreeing: "<< (old_bOKReloc == new_bOKReloc) << "\tnew: " << new_bOKReloc << " vs. old: " << old_bOKReloc << endl;
+						std::cout << std::fixed << std::setprecision(9) << std::left;
+//						std::chrono::duration<double> old_time = t2 - t1;
+						std::chrono::duration<double> new_time = t4 - t3;
+//						cout << "time for old pnp: " << old_time.count() << endl;
+//						cout << "time for new pnp: " << new_time.count() << endl << endl;
 
                         if(bOKMM && !bOKReloc)
                         {
@@ -1502,7 +1574,272 @@ namespace ORB_SLAM2
 
     }
 
-    void Tracking::Reset()
+	bool Tracking::RelocalizationNewPnP()
+	{
+		// Compute Bag of Words Vector
+		mCurrentFrame.ComputeBoW();
+
+		// Relocalization is performed when tracking is lost
+		// Track Lost: Query KeyFrame Database for keyframe candidates for relocalisation
+		vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectRelocalizationCandidates(&mCurrentFrame);
+
+		if(vpCandidateKFs.empty())
+			return false;
+
+		const int nKFs = vpCandidateKFs.size();
+
+		// We perform first an ORB matching with each candidate
+		// If enough matches are found we setup a PnP solver
+		ORBmatcher matcher(0.75,true);
+
+		vector<PnPsolver*> vpPnPsolvers;
+		vpPnPsolvers.resize(nKFs);
+
+		vector<std::shared_ptr<PnP::PnpObjective>> vpNewPnPsolvers;
+		vpNewPnPsolvers.resize(nKFs);
+
+		vector<vector<MapPoint*> > vvpMapPointMatches;
+		vvpMapPointMatches.resize(nKFs);
+
+		vector<bool> vbDiscarded;
+		vbDiscarded.resize(nKFs);
+
+		int nCandidates=0;
+
+		float values[9] =
+			{
+				mCurrentFrame.fx, 0, mCurrentFrame.cx,
+				0, mCurrentFrame.fy, mCurrentFrame.cy,
+				0, 0, 1
+			};
+		cv::Mat CameraMatrix(3, 3, CV_32FC1, values);
+
+		for(int i=0; i<nKFs; i++)
+		{
+//			KeyFrame* pKF = vpCandidateKFs[i];
+			if(vpCandidateKFs[i]->isBad())
+				vbDiscarded[i] = true;
+			else
+			{
+				int nmatches = matcher.SearchByBoW(vpCandidateKFs[i],mCurrentFrame,vvpMapPointMatches[i]);
+				if(nmatches<15)
+				{
+					vbDiscarded[i] = true;
+					continue;
+				}
+				else
+				{
+					PnPsolver* pSolver = new PnPsolver(mCurrentFrame, vvpMapPointMatches[i]);
+					pSolver->SetRansacParameters(0.99,10,300,4,0.5,5.991);
+					vpPnPsolvers[i] = pSolver;
+					////
+					std::vector<cv::Point2f> temp2d;
+					std::vector<cv::Point3f> temp3d;
+					std::vector<cv::Point3f> templines;
+					for (std::size_t mapPointIndex = 0; mapPointIndex < vvpMapPointMatches[i].size(); ++mapPointIndex)
+					{
+						if (vvpMapPointMatches[i][mapPointIndex] != nullptr)
+						{
+							temp2d.emplace_back(cv::Point2d(mCurrentFrame.mvKeys[mapPointIndex].pt.x, mCurrentFrame.mvKeys[mapPointIndex].pt.y));
+
+							auto location = ORB_SLAM2::Converter::toVector3d(vvpMapPointMatches[i][mapPointIndex]->GetWorldPos());
+							temp3d.emplace_back(location.x(), location.y(), location.z());
+
+							cv::Mat invK = CameraMatrix.inv();
+							cv::Mat pt = (cv::Mat_<float>(3, 1) << mCurrentFrame.mvKeys[mapPointIndex].pt.x, mCurrentFrame.mvKeys[mapPointIndex].pt.y, 1);
+							cv::Mat templine = invK * pt;
+
+							templine = templine / norm(templine);
+							cv::Point3f v(templine);
+							templines.push_back(v);
+						}
+					}
+					std::vector<Eigen::Vector3d> points;
+					std::vector<Eigen::Vector3d> lines;
+					vector<double> weights;
+					std::vector<int> indices;
+
+					for (std::size_t p_indx = 0; p_indx < temp3d.size(); p_indx++)
+					{
+						points.emplace_back(temp3d[p_indx].x, temp3d[p_indx].y, temp3d[p_indx].z);
+						lines.emplace_back(templines[p_indx].x, templines[p_indx].y, templines[p_indx].z);
+
+						weights.push_back(1);
+						indices.push_back(p_indx);
+					}
+
+					auto pnp_input = PnP::PnpInput::init(std::move(points), std::move(lines), std::move(weights), std::move(indices));
+					auto pnp_objective = PnP::PnpObjective::init(pnp_input);
+
+					vpNewPnPsolvers[i] = pnp_objective;
+
+					////
+					nCandidates++;
+				}
+			}
+		}
+		// Alternatively perform some iterations of P4P RANSAC
+		// Until we found a camera pose supported by enough inliers
+		bool bMatch = false;
+		ORBmatcher matcher2(0.9,true);
+		int try_count = 10;
+
+		while(nCandidates>0 && !bMatch)
+		{
+			for(int i=0; i<nKFs; i++)
+			{
+				if(vbDiscarded[i])
+					continue;
+
+				// Perform 5 Ransac Iterations
+				vector<bool> vbInliers;
+				int nInliers;
+				bool bNoMore;
+
+				PnPsolver* pSolver = vpPnPsolvers[i];
+				cv::Mat Tcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
+				// here
+				auto barrier_method_settings = PnP::BarrierMethodSettings::init();
+				barrier_method_settings->epsilon = 4E-8;
+				barrier_method_settings->verbose = false;
+
+				auto pnp = PnP::PnpProblemSolver::init();
+				auto pnp_res = pnp->solve_pnp(vpNewPnPsolvers[i], barrier_method_settings);
+				auto rotationMatrix = pnp_res.rotation_matrix().transpose().eval();
+				auto translationVector = pnp_res.translation_vector();
+				cv::Mat cvR(3,3,CV_32F), cvt(3,1,CV_32F);
+				cv::eigen2cv(rotationMatrix,cvR);
+				cv::eigen2cv(translationVector,cvt);
+				auto cost = pnp_res.cost();
+
+				cv::Mat mBestTcw;
+				mBestTcw = cv::Mat::eye(4,4,CV_32F);
+				cvR.copyTo(mBestTcw.rowRange(0,3).colRange(0,3));
+				cvt.copyTo(mBestTcw.rowRange(0,3).col(3));
+//				cout << "mBestTcw" << endl;
+//				cout << mBestTcw << endl;
+				cout << "\t our result " << endl;
+				cout << mBestTcw << endl;
+				cout << "\t original result " << endl;
+				cout << Tcw << endl << endl;
+//				Tcw = mBestTcw;
+				// If Ransac reachs max. iterations discard keyframe
+//				if(bNoMore)
+				float cost_threashold = 0.006;
+				if(cost >= cost_threashold)
+				{
+					cout << "BAD COST:    bNoMore cost is " << cost << endl;
+					vbDiscarded[i]=true;
+					nCandidates--;
+				}
+
+				// If a Camera Pose is computed, optimize
+//				if(!Tcw.empty())
+				if(cost < cost_threashold && try_count > 0)
+				{
+					try_count--;
+//					Tcw.copyTo(mCurrentFrame.mTcw);
+					mBestTcw.copyTo(mCurrentFrame.mTcw);
+
+					set<MapPoint*> sFound;
+
+//					const int np = vbInliers.size();
+//					cout << "vbInliers.size " << np << endl;
+//					if (np == 0)
+//					{
+//						return false;
+//					}
+//					for(int j=0; j<np; j++)
+					for(int j=0; j<400; j++)
+					{
+//						if(vbInliers[j])
+						{
+							mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];
+							sFound.insert(vvpMapPointMatches[i][j]);
+						}
+//						else
+//							mCurrentFrame.mvpMapPoints[j]=NULL;
+					}
+
+					int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+
+					if(nGood<10)
+						continue;
+
+					for(int io =0; io<mCurrentFrame.N; io++)
+						if(mCurrentFrame.mvbOutlier[io])
+							mCurrentFrame.mvpMapPoints[io]=static_cast<MapPoint*>(NULL);
+
+					// If few inliers, search by projection in a coarse window and optimize again
+					if(nGood<50 && try_count > 0)
+					{
+						try_count--;
+						int nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,10,100);
+
+						if(nadditional+nGood>=50)
+						{
+							nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+
+							// If many inliers but still not enough, search by projection again in a narrower window
+							// the camera has been already optimized with many points
+							if(nGood>30 && nGood<50)
+							{
+								sFound.clear();
+								for(int ip =0; ip<mCurrentFrame.N; ip++)
+									if(mCurrentFrame.mvpMapPoints[ip])
+										sFound.insert(mCurrentFrame.mvpMapPoints[ip]);
+								nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,3,64);
+
+								// Final optimization
+								if(nGood+nadditional>=50)
+								{
+									nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+
+									for(int io =0; io<mCurrentFrame.N; io++)
+										if(mCurrentFrame.mvbOutlier[io])
+											mCurrentFrame.mvpMapPoints[io]=NULL;
+								}
+							}
+						}
+						cout << "IMPROVE COST   nGOOD < 50, cost " << cost << endl;
+					}
+
+
+					// If the pose is supported by enough inliers stop ransacs and continue
+					if(nGood>=50)
+					{
+						bMatch = true;
+						cout << "GOOD COST     nGOOD >= 50, cost " << cost << endl;
+						break;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					cout << "tcw was empty, haven't even tried" << endl;
+					cout << "new_pnp BAD cost is " << cost << endl;
+					cout << "new_pnp BAD cost is " << cost << endl;
+					return false;
+				}
+			}
+		}
+
+		if(!bMatch)
+		{
+			return false;
+		}
+		else
+		{
+			mnLastRelocFrameId = mCurrentFrame.mnId;
+			return true;
+		}
+		return false;
+	}
+
+	void Tracking::Reset()
     {
 
         cout << "System Reseting" << endl;
