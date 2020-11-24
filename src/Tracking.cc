@@ -322,11 +322,11 @@ namespace ORB_SLAM2
                 {
 //					auto tmp_mCurrentFrame = Frame(mCurrentFrame);
 //
-//					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 //
 //                    old_bOK = Relocalization();
 //
-//					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 //
 //					mCurrentFrame = tmp_mCurrentFrame;
 
@@ -338,10 +338,10 @@ namespace ORB_SLAM2
 					bOK = old_bOK || new_bOK;
 					cout << "agreeing: "<< (old_bOK == new_bOK) << "\tnew: " << new_bOK << " vs. old: " << old_bOK << endl;
 					std::cout << std::fixed << std::setprecision(9) << std::left;
-//					std::chrono::duration<double> old_time = t2 - t1;
+					std::chrono::duration<double> old_time = t2 - t1;
 					std::chrono::duration<double> new_time = t4 - t3;
-//					cout << "time for old pnp: " << old_time.count() << endl;
-//					cout << "time for new pnp: " << new_time.count() << endl << endl;
+					cout << "time for old pnp: " << old_time.count() << endl;
+					cout << "time for new pnp: " << new_time.count() << endl << endl;
 //					cout << "new is faster " << (new_time.count() < old_time.count()) << endl;
                 }
             }
@@ -353,11 +353,11 @@ namespace ORB_SLAM2
                 {
 //					auto tmp_mCurrentFrame = Frame(mCurrentFrame);
 //
-//					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 //
 //					old_bOK = Relocalization();
 //
-//					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 //
 //					mCurrentFrame = tmp_mCurrentFrame;
 
@@ -370,10 +370,10 @@ namespace ORB_SLAM2
 					bOK = old_bOK || new_bOK;
 					cout << "agreeing: "<< (old_bOK == new_bOK) << "\tnew: " << new_bOK << " vs. old: " << old_bOK << endl;
 					std::cout << std::fixed << std::setprecision(9) << std::left;
-//					std::chrono::duration<double> old_time = t2 - t1;
+					std::chrono::duration<double> old_time = t2 - t1;
 					std::chrono::duration<double> new_time = t4 - t3;
-//					cout << "time for old pnp: " << old_time.count() << endl;
-//					cout << "time for new pnp: " << new_time.count() << endl << endl;
+					cout << "time for old pnp: " << old_time.count() << endl;
+					cout << "time for new pnp: " << new_time.count() << endl << endl;
 //					cout << "new is faster " << (new_time.count() < old_time.count()) << endl;
                 }
                 else
@@ -415,11 +415,11 @@ namespace ORB_SLAM2
                         }
 //                        auto tmp_mCurrentFrame = Frame(mCurrentFrame);
 //
-//						std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+						std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 //
 //						old_bOKReloc = Relocalization();
 //
-//						std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+						std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 //
 //						mCurrentFrame = tmp_mCurrentFrame;
 
@@ -433,10 +433,10 @@ namespace ORB_SLAM2
 						bOKReloc = old_bOKReloc || new_bOKReloc;
 						cout << "agreeing: "<< (old_bOKReloc == new_bOKReloc) << "\tnew: " << new_bOKReloc << " vs. old: " << old_bOKReloc << endl;
 						std::cout << std::fixed << std::setprecision(9) << std::left;
-//						std::chrono::duration<double> old_time = t2 - t1;
+						std::chrono::duration<double> old_time = t2 - t1;
 						std::chrono::duration<double> new_time = t4 - t3;
-//						cout << "time for old pnp: " << old_time.count() << endl;
-//						cout << "time for new pnp: " << new_time.count() << endl << endl;
+						cout << "time for old pnp: " << old_time.count() << endl;
+						cout << "time for new pnp: " << new_time.count() << endl << endl;
 
                         if(bOKMM && !bOKReloc)
                         {
@@ -1592,9 +1592,6 @@ namespace ORB_SLAM2
 		// If enough matches are found we setup a PnP solver
 		ORBmatcher matcher(0.75,true);
 
-		vector<PnPsolver*> vpPnPsolvers;
-		vpPnPsolvers.resize(nKFs);
-
 		vector<std::shared_ptr<PnP::PnpObjective>> vpNewPnPsolvers;
 		vpNewPnPsolvers.resize(nKFs);
 
@@ -1616,7 +1613,6 @@ namespace ORB_SLAM2
 
 		for(int i=0; i<nKFs; i++)
 		{
-//			KeyFrame* pKF = vpCandidateKFs[i];
 			if(vpCandidateKFs[i]->isBad())
 				vbDiscarded[i] = true;
 			else
@@ -1629,10 +1625,6 @@ namespace ORB_SLAM2
 				}
 				else
 				{
-					PnPsolver* pSolver = new PnPsolver(mCurrentFrame, vvpMapPointMatches[i]);
-					pSolver->SetRansacParameters(0.99,10,300,4,0.5,5.991);
-					vpPnPsolvers[i] = pSolver;
-					////
 					std::vector<cv::Point2f> temp2d;
 					std::vector<cv::Point3f> temp3d;
 					std::vector<cv::Point3f> templines;
@@ -1673,7 +1665,6 @@ namespace ORB_SLAM2
 
 					vpNewPnPsolvers[i] = pnp_objective;
 
-					////
 					nCandidates++;
 				}
 			}
@@ -1682,7 +1673,8 @@ namespace ORB_SLAM2
 		// Until we found a camera pose supported by enough inliers
 		bool bMatch = false;
 		ORBmatcher matcher2(0.9,true);
-		int try_count = 10;
+		int try_count = 3;
+		float cost_threashold = 0.007;
 
 		while(nCandidates>0 && !bMatch)
 		{
@@ -1690,23 +1682,18 @@ namespace ORB_SLAM2
 			{
 				if(vbDiscarded[i])
 					continue;
-
-				// Perform 5 Ransac Iterations
-				vector<bool> vbInliers;
-				int nInliers;
 				bool bNoMore;
 
-				PnPsolver* pSolver = vpPnPsolvers[i];
-				cv::Mat Tcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
-				// here
 				auto barrier_method_settings = PnP::BarrierMethodSettings::init();
 				barrier_method_settings->epsilon = 4E-8;
 				barrier_method_settings->verbose = false;
 
 				auto pnp = PnP::PnpProblemSolver::init();
 				auto pnp_res = pnp->solve_pnp(vpNewPnPsolvers[i], barrier_method_settings);
+
 				auto rotationMatrix = pnp_res.rotation_matrix().transpose().eval();
 				auto translationVector = pnp_res.translation_vector();
+
 				cv::Mat cvR(3,3,CV_32F), cvt(3,1,CV_32F);
 				cv::eigen2cv(rotationMatrix,cvR);
 				cv::eigen2cv(translationVector,cvt);
@@ -1716,16 +1703,7 @@ namespace ORB_SLAM2
 				mBestTcw = cv::Mat::eye(4,4,CV_32F);
 				cvR.copyTo(mBestTcw.rowRange(0,3).colRange(0,3));
 				cvt.copyTo(mBestTcw.rowRange(0,3).col(3));
-//				cout << "mBestTcw" << endl;
-//				cout << mBestTcw << endl;
-				cout << "\t our result " << endl;
-				cout << mBestTcw << endl;
-				cout << "\t original result " << endl;
-				cout << Tcw << endl << endl;
-//				Tcw = mBestTcw;
-				// If Ransac reachs max. iterations discard keyframe
-//				if(bNoMore)
-				float cost_threashold = 0.006;
+
 				if(cost >= cost_threashold)
 				{
 					cout << "BAD COST:    bNoMore cost is " << cost << endl;
@@ -1734,31 +1712,17 @@ namespace ORB_SLAM2
 				}
 
 				// If a Camera Pose is computed, optimize
-//				if(!Tcw.empty())
 				if(cost < cost_threashold && try_count > 0)
 				{
 					try_count--;
-//					Tcw.copyTo(mCurrentFrame.mTcw);
 					mBestTcw.copyTo(mCurrentFrame.mTcw);
 
 					set<MapPoint*> sFound;
 
-//					const int np = vbInliers.size();
-//					cout << "vbInliers.size " << np << endl;
-//					if (np == 0)
-//					{
-//						return false;
-//					}
-//					for(int j=0; j<np; j++)
 					for(int j=0; j<400; j++)
 					{
-//						if(vbInliers[j])
-						{
-							mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];
-							sFound.insert(vvpMapPointMatches[i][j]);
-						}
-//						else
-//							mCurrentFrame.mvpMapPoints[j]=NULL;
+						mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];
+						sFound.insert(vvpMapPointMatches[i][j]);
 					}
 
 					int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
