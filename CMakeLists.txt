@@ -75,6 +75,17 @@ src/KeyFrameDatabase.cc
 src/Sim3Solver.cc
 src/Initializer.cc
 src/Viewer.cc
+Thirdparty/track_drone/PnP/DualVar.cpp
+Thirdparty/track_drone/PnP/LogDetHessianMatrix.cpp
+Thirdparty/track_drone/PnP/PnpBarrierMethodSolver.cpp
+Thirdparty/track_drone/PnP/PnpInput.cpp
+Thirdparty/track_drone/PnP/PnpLocalSearch.cpp
+Thirdparty/track_drone/PnP/PnpResult.cpp
+Thirdparty/track_drone/PnP/PnpObjective.cpp
+Thirdparty/track_drone/PnP/PnpProblemSolver.cpp
+Thirdparty/track_drone/PnP/QuaternionVector.cpp
+Thirdparty/track_drone/Utils_pnp/GeneralUtils.cpp
+Thirdparty/track_drone/Utils_pnp/Parsing.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
