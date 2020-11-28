@@ -217,7 +217,7 @@ namespace ORB_SLAM2
         return Tcw;
     }
 
-    cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
+    cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, const int pnp_version)
     {
         if(mSensor!=MONOCULAR)
         {
@@ -259,7 +259,7 @@ namespace ORB_SLAM2
             }
         }
 
-        cv::Mat Tcw = mpTracker->GrabImageMonocular(im,timestamp);
+        cv::Mat Tcw = mpTracker->GrabImageMonocular(im,timestamp, pnp_version);
 
         unique_lock<mutex> lock2(mMutexState);
         mTrackingState = mpTracker->mState;

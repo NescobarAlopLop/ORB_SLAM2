@@ -236,7 +236,7 @@ namespace ORB_SLAM2
     }
 
 
-    cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
+    cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, const int pnp_version)
     {
         mImGray = im;
 
@@ -260,12 +260,12 @@ namespace ORB_SLAM2
         else
             mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-        Track();
+        Track(pnp_version);
 
         return mCurrentFrame.mTcw.clone();
     }
 
-    void Tracking::Track()
+    void Tracking::Track(const int pnp_version)
     {
         if(mState==NO_IMAGES_YET)
         {
@@ -320,29 +320,18 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-//					auto tmp_mCurrentFrame = Frame(mCurrentFrame);
-//
-					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-//
-//                    old_bOK = Relocalization();
-//
-					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-//
-//					mCurrentFrame = tmp_mCurrentFrame;
 
-					std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-
-                    new_bOK = RelocalizationNewPnP();
-
-					std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
-					bOK = old_bOK || new_bOK;
-					cout << "agreeing: "<< (old_bOK == new_bOK) << "\tnew: " << new_bOK << " vs. old: " << old_bOK << endl;
-					std::cout << std::fixed << std::setprecision(9) << std::left;
-					std::chrono::duration<double> old_time = t2 - t1;
-					std::chrono::duration<double> new_time = t4 - t3;
-					cout << "time for old pnp: " << old_time.count() << endl;
-					cout << "time for new pnp: " << new_time.count() << endl << endl;
-//					cout << "new is faster " << (new_time.count() < old_time.count()) << endl;
+					switch (pnp_version)
+					{
+					case 0:
+						bOK = Relocalization();
+						break;
+					case 1:
+						bOK = RelocalizationNewPnP();
+						break;
+					default:
+						new_bOK = RelocalizationNewPnP();
+					}
                 }
             }
             else
@@ -351,31 +340,18 @@ namespace ORB_SLAM2
 
                 if(mState==LOST)
                 {
-//					auto tmp_mCurrentFrame = Frame(mCurrentFrame);
-//
-					std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-//
-//					old_bOK = Relocalization();
-//
-					std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-//
-//					mCurrentFrame = tmp_mCurrentFrame;
-
-					std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-
-					new_bOK = RelocalizationNewPnP();
-
-					std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
-
-					bOK = old_bOK || new_bOK;
-					cout << "agreeing: "<< (old_bOK == new_bOK) << "\tnew: " << new_bOK << " vs. old: " << old_bOK << endl;
-					std::cout << std::fixed << std::setprecision(9) << std::left;
-					std::chrono::duration<double> old_time = t2 - t1;
-					std::chrono::duration<double> new_time = t4 - t3;
-					cout << "time for old pnp: " << old_time.count() << endl;
-					cout << "time for new pnp: " << new_time.count() << endl << endl;
-//					cout << "new is faster " << (new_time.count() < old_time.count()) << endl;
-                }
+					switch (pnp_version)
+					{
+					case 0:
+						bOK = Relocalization();
+						break;
+					case 1:
+						bOK = RelocalizationNewPnP();
+						break;
+					default:
+						bOK = RelocalizationNewPnP();
+					}
+				}
                 else
                 {
                     if(!mbVO)
@@ -413,30 +389,18 @@ namespace ORB_SLAM2
                             vbOutMM = mCurrentFrame.mvbOutlier;
                             TcwMM = mCurrentFrame.mTcw.clone();
                         }
-//                        auto tmp_mCurrentFrame = Frame(mCurrentFrame);
-//
-						std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-//
-//						old_bOKReloc = Relocalization();
-//
-						std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-//
-//						mCurrentFrame = tmp_mCurrentFrame;
 
-						std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-
-						new_bOKReloc = RelocalizationNewPnP();
-
-						std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
-
-
-						bOKReloc = old_bOKReloc || new_bOKReloc;
-						cout << "agreeing: "<< (old_bOKReloc == new_bOKReloc) << "\tnew: " << new_bOKReloc << " vs. old: " << old_bOKReloc << endl;
-						std::cout << std::fixed << std::setprecision(9) << std::left;
-						std::chrono::duration<double> old_time = t2 - t1;
-						std::chrono::duration<double> new_time = t4 - t3;
-						cout << "time for old pnp: " << old_time.count() << endl;
-						cout << "time for new pnp: " << new_time.count() << endl << endl;
+						switch (pnp_version)
+						{
+						case 0:
+							bOKReloc = Relocalization();
+							break;
+						case 1:
+							bOKReloc = RelocalizationNewPnP();
+							break;
+						default:
+							bOKReloc = RelocalizationNewPnP();
+						}
 
                         if(bOKMM && !bOKReloc)
                         {
@@ -1617,6 +1581,7 @@ namespace ORB_SLAM2
 				vbDiscarded[i] = true;
 			else
 			{
+				//            	this->mpMap->GetAllMapPoints();
 				int nmatches = matcher.SearchByBoW(vpCandidateKFs[i],mCurrentFrame,vvpMapPointMatches[i]);
 				if(nmatches<15)
 				{
@@ -1689,7 +1654,10 @@ namespace ORB_SLAM2
 				barrier_method_settings->verbose = false;
 
 				auto pnp = PnP::PnpProblemSolver::init();
+
+				// change for solve_pnp with ransac
 				auto pnp_res = pnp->solve_pnp(vpNewPnPsolvers[i], barrier_method_settings);
+				// ---
 
 				auto rotationMatrix = pnp_res.rotation_matrix().transpose().eval();
 				auto translationVector = pnp_res.translation_vector();
@@ -1719,6 +1687,11 @@ namespace ORB_SLAM2
 
 					set<MapPoint*> sFound;
 
+					// options:
+					// - either wrap our solution with ransac
+					// 		- random choose part of input points - lines pairs
+					//		- choose inliears accordingly
+					// - either copy all of the keypoints
 					for(int j=0; j<400; j++)
 					{
 						mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];

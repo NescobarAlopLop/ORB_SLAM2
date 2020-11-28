@@ -1,12 +1,12 @@
+#include <getopt.h>
 #include<iostream>
 #include<algorithm>
 #include<fstream>
+
 #include<chrono>
 
 #include<opencv2/core/core.hpp>
-
 #include<System.h>
-
 using namespace std;
 
 
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 	if(argc != 4)
 	{
 		cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings vide_device_id" << endl;
-		cerr << endl << "Example:\n./mono_live_from_usb_cam Vocabulary/ORBvoc.txt Examples/Monocular/TUM_512.yaml 0" << endl;
+		cerr << endl << "Example:\n./mono_live_from_usb_cam Vocabulary/ORBvoc.txt Examples/Monocular/TUM_512.yaml 0 1" << endl;
 		return 1;
 	}
 	// Create SLAM system. It initializes all system threads and gets ready to process frames.
@@ -30,6 +30,7 @@ int main(int argc, char **argv)
 	// Main loop
 	cv::Mat im;
 	int deviceID = stoi(argv[3]);
+	int pnp_version = stoi(argv[4]);
 	int apiID = cv::CAP_ANY;      // 0 = autodetect default API
 	cv::VideoCapture cap;
 	cap.open(deviceID, apiID);
@@ -59,7 +60,7 @@ int main(int argc, char **argv)
 #endif
 
 		// Pass the image to the SLAM system
-		SLAM.TrackMonocular(im, ni);
+		SLAM.TrackMonocular(im, ni, pnp_version);
 
 #ifdef COMPILEDWITHC11
 		std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -69,6 +70,9 @@ int main(int argc, char **argv)
 		std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
 #endif
 		double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+
+		string file_name = "/home/george/Pictures/test_sequence_laptop/4/starry_night-" + to_string(t1.time_since_epoch().count()) + ".png";
+		imwrite(file_name, im);
 	}
 
 	// Stop all threads
@@ -77,7 +81,7 @@ int main(int argc, char **argv)
 	// Save camera trajectory
 	SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 void LoadImages(const string &strImagePath, const string &strPathTimes,
