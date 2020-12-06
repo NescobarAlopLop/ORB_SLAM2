@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 	cout << endl << "-------" << endl;
 	cout << "Start processing sequence ..." << endl;
 
-
+	double tframe;
 	for(int ni = 0; ni < totalImages; ++ni)
 	{
 		// Read image from camera
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 			cout << "loading image " << vstrImageFilenames[ni] << endl;
 //			im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
 			im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_GRAYSCALE);
-			double tframe = vTimestamps[ni];
+			tframe = vTimestamps[ni];
 		}
 		else
 		{
@@ -167,6 +167,20 @@ int main(int argc, char **argv)
 #endif
 		double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
 
+		if (mode == OperationModes::DATASET)
+		{
+			vTimestamps[ni]=ttrack;
+
+			// Wait to load the next frame
+			double T=0;
+			if(ni<totalImages-1)
+				T = vTimestamps[ni+1]-tframe;
+			else if(ni>0)
+				T = tframe-vTimestamps[ni-1];
+
+			if(ttrack<T)
+				usleep((T-ttrack)*1e6);
+		}
 		string file_name = "/home/george/Pictures/test_sequence_laptop/4/starry_night-" + to_string(t1.time_since_epoch().count()) + ".png";
 		imwrite(file_name, im);
 	}
@@ -331,10 +345,7 @@ void LoadImagesEuroc(
 	string strPathTimes;
 	string strImagePath;
 
-	string ending = "/";
-	bool endsWithSlash = has_suffix(cam0Path, ending);
-	int hasSlash = cam0Path.compare(cam0Path.length() - ending.length(), ending.length(), ending);
-	if (endsWithSlash)
+	if (has_suffix(cam0Path, "/"))
 	{
 		strPathTimes = cam0Path + "data.csv";
 		strImagePath = cam0Path + "data";
@@ -361,14 +372,6 @@ void LoadImagesEuroc(
 			std::vector<std::string> result = split(s, ',');
 			vstrImages.push_back(strImagePath + "/" + result[1]);
 			vTimeStamps.push_back(stod(result[0])/1e9);
-
-
-//			stringstream ss;
-//			ss << s;
-//			vstrImages.push_back(strImagePath + "/" + ss.str());
-//			double t;
-//			ss >> t;
-//			vTimeStamps.push_back(t/1e9);
 		}
 	}
 }
