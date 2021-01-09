@@ -296,8 +296,13 @@ void parse_arguments(int argc, char* const* argv)
 			cout << "brief				- not implemented" << endl;
 			cout << endl;
 			cout << "Example commands:" << endl;
-			cout << "./mono_live_from_usb_cam Vocabulary/ORBvoc.txt Examples/Monocular/TUM1.yaml --camera 0" << endl;
-			cout << "./mono_live_from_usb_cam Vocabulary/ORBvoc.txt Examples/Monocular/TUM1.yaml --camera 0" << endl;
+			cout << "\t - run with dataset and OLD pnp version:" << endl;
+			cout << "./mono_live_from_usb_cam -v Vocabulary/ORBvoc.txt -c Examples/Monocular/TUM1.yaml -m 1 -d /home/george/Documents/datasets/dataset-room1_512_16/mav0/cam0" << endl;
+			cout << "\t - run with dataset and NEW pnp version:" << endl;
+			cout << "./mono_live_from_usb_cam -v Vocabulary/ORBvoc.txt -c Examples/Monocular/TUM1.yaml -m 1 -d /home/george/Documents/datasets/dataset-room1_512_16/mav0/cam0 --new_pnp" << endl;
+
+			cout << "\t - run in camera mode and NEW pnp version:" << endl;
+			cout << "./mono_live_from_usb_cam -h -v Vocabulary/ORBvoc.txt -c Examples/Monocular/TUM1.yaml -i 4 --new_pnp --mode 0" << endl;
 			break;
 		case '?':
 			/* getopt_long already printed an error message. */
