@@ -130,7 +130,10 @@ int main(int argc, char **argv)
 		// Read image from camera
 		if (mode == OperationModes::DATASET)
 		{
-			cout << "loading image " << vstrImageFilenames[ni] << endl;
+			if (ni % 50 == 0)
+			{
+				cout << "loading image " << vstrImageFilenames[ni] << endl;
+			}
 //			im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
 			im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_GRAYSCALE);
 			tframe = vTimestamps[ni];
