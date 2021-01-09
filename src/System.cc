@@ -396,20 +396,10 @@ namespace ORB_SLAM2
         // Transform all keyframes so that the first keyframe is at the origin.
         // After a loop closure the first keyframe might not be at the origin.
         //cv::Mat Two = vpKFs[0]->GetPoseInverse();
-        fstream appendFileToWorkWith;
+        fstream basicFstream;
+        basicFstream.open(filename, fstream::in | std::fstream::out | std::fstream::trunc);
 
-        appendFileToWorkWith.open(filename, fstream::in | std::fstream::out | std::fstream::app);
-
-        if (!appendFileToWorkWith)
-		{
-        	cout << "Cannot open trajectory file, creating new file ..." << endl;
-        	appendFileToWorkWith.open(filename, fstream::in | std::fstream::out | std::fstream::trunc);
-		}
-        else
-		{
-        	cout << "Trajectory file found." << endl;
-		}
-		appendFileToWorkWith << "timestamp,tx,ty,tz,qx,qy,qz,qw" << endl;
+		basicFstream << "timestamp,tx,ty,tz,qx,qy,qz,qw" << endl;
         for(auto pKF : vpKFs)
         {
             // pKF->SetPose(pKF->GetPose()*Two);
@@ -420,12 +410,12 @@ namespace ORB_SLAM2
             cv::Mat R = pKF->GetRotation().t();
             vector<float> q = Converter::toQuaternion(R);
             cv::Mat t = pKF->GetCameraCenter();
-			appendFileToWorkWith << setprecision(6) <<
-			pKF->mTimeStamp << setprecision(7) << "," << t.at<float>(0) << "," << t.at<float>(1) << "," << t.at<float>(2)
-			    << "," << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << endl;
+			basicFstream << setprecision(6) <<
+						 pKF->mTimeStamp << setprecision(7) << "," << t.at<float>(0) << "," << t.at<float>(1) << "," << t.at<float>(2)
+						 << "," << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << endl;
         }
 
-        appendFileToWorkWith.close();
+        basicFstream.close();
         cout << endl << "trajectory saved!" << endl;
     }
 
