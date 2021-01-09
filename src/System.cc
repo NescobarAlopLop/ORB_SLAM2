@@ -302,17 +302,21 @@ namespace ORB_SLAM2
 
     void System::Shutdown()
     {
+    	cout << "Requesting local mapper shutdown" << endl;
         mpLocalMapper->RequestFinish();
-        mpLoopCloser->RequestFinish();
+		cout << "Requesting loop closer shutdown" << endl;
+		mpLoopCloser->RequestFinish();
         if(mpViewer)
         {
             mpViewer->RequestFinish();
+			cout << "Checking map viewer is finished" << endl;
             while(!mpViewer->isFinished())
                 usleep(5000);
         }
 
-        // Wait until all thread have effectively stopped
-        while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
+        // Wait until all threads have effectively stopped
+		cout << "Waiting until all threads have effectively stopped" << endl;
+		while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
         {
             usleep(5000);
         }
