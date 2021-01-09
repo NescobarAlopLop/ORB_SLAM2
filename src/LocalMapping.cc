@@ -595,8 +595,8 @@ namespace ORB_SLAM2
             return;
         mbStopped = false;
         mbStopRequested = false;
-        for(list<KeyFrame*>::iterator lit = mlNewKeyFrames.begin(), lend=mlNewKeyFrames.end(); lit!=lend; lit++)
-            delete *lit;
+        for(auto & mlNewKeyFrame : mlNewKeyFrames)
+            delete mlNewKeyFrame;
         mlNewKeyFrames.clear();
 
         cout << "Local Mapping RELEASE" << endl;
