@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 	int apiID = cv::CAP_ANY;      // 0 = autodetect default API
 
 
-	int totalImages = 10000;
+	int totalImages = 2000;
 	switch(mode)
 	{
 	case OperationModes::LIVE_CAM:
@@ -110,7 +110,8 @@ int main(int argc, char **argv)
 		break;
 	case OperationModes::DATASET:
 		LoadImagesEuroc(datasetPath, vstrImageFilenames, vTimestamps, skip_frames);
-		totalImages = vstrImageFilenames.size();
+		if ( totalImages > vstrImageFilenames.size())
+			totalImages = vstrImageFilenames.size();
 		break;
 	default:
 		cout << "No such operation mode" << endl;
