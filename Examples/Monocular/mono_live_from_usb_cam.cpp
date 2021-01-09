@@ -29,13 +29,14 @@ static int camera_calib;
 static int camera_calib_int;
 static int vocabulary_path_int;
 static int dataset_int;
-static int kf_trajectory;
+static int kf_trajectory_int;
 static int skip_frames = 0;
 static int new_pnp = 0;
 
 string vocabularyPath;
 string datasetPath;
 string cameraSettingsPath;
+string kf_trajectory_path;
 
 enum OperationModes
 {
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
 	cout << "vocabulary_path_int " << vocabulary_path_int << endl;
 	cout << "dataset " << datasetPath << endl;
 	cout << "dataset_int " << dataset_int << endl;
-	cout << "kf_trajectory " << kf_trajectory << endl;
+	cout << "kf_trajectory_path " << kf_trajectory_path << endl;
 	cout << "skip_frames " << skip_frames << endl;
 	cout << "new_pnp " << new_pnp << endl;
 	cout << "verbose_flag " << verbose_flag << endl;
@@ -185,15 +186,18 @@ int main(int argc, char **argv)
 			if(ttrack<T)
 				usleep((T-ttrack)*1e6);
 		}
-		string file_name = "/home/george/Pictures/test_sequence_laptop/4/starry_night-" + to_string(t1.time_since_epoch().count()) + ".png";
-		imwrite(file_name, im);
 	}
 
 	// Stop all threads
+	// TODO: check why takes very long time to close all threads
+	// added print out for each stop request for this purpose
 	SLAM.Shutdown();
 
 	// Save camera trajectory
-	SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+	if (kf_trajectory_path.length() > 0)
+	{
+		SLAM.SaveKeyFrameTrajectoryTUM(kf_trajectory_path + "_key_frame.csv");
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -219,7 +223,7 @@ void parse_arguments(int argc, char* const* argv)
 				{"camera_calib", required_argument, &camera_calib_int, 'c'},
 				{"vocabulary", required_argument, &vocabulary_path_int, 'v'},
 				{"dataset", optional_argument, &dataset_int, 'd'},
-				{"kf_trajectory", optional_argument, &kf_trajectory, 't'},
+				{"kf_trajectory_path", optional_argument, &kf_trajectory_int, 't'},
 				{"skip-frames", optional_argument, &skip_frames, 's'},
 
 				/* These options set a flag. */
@@ -279,6 +283,7 @@ void parse_arguments(int argc, char* const* argv)
 
 		case 't':
 			printf ("option -t with value `%s'\n", optarg);
+			kf_trajectory_path = optarg;
 			break;
 
 		case 's':
@@ -293,7 +298,7 @@ void parse_arguments(int argc, char* const* argv)
 			cout << "--dataset			- path to dataset folder: PATH_TO_SEQUENCE/cam0/" << endl;
 			cout << "						cam0 folder should have data folder, and data.csv file" << endl;
 			cout << "--new_pnp			- if set new_pnp algorithm for re-localization will be used by ORB_SLAM2" << endl;
-			cout << "--kf_trajectory	- key frame trajectory result path" << endl;
+			cout << "--kf_trajectory_path	- key frame trajectory result path" << endl;
 			cout << "--skip-frames		- number of frames to skip to check re-localization" << endl;
 			cout << endl;
 			cout << "verbose			- not implemented, currently only verbose" << endl;
