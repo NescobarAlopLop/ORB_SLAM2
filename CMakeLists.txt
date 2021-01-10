@@ -161,9 +161,6 @@ set(sample_pnplib
         )
 ocv_include_modules_recurse(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-add_executable(main
-        Examples/Monocular/main.cpp
-        ${sample_pnplib})
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
@@ -177,8 +174,6 @@ include_directories(
         -Ldependencies/lib
 )
 
-
-
 target_link_libraries(
         ${PROJECT_NAME}
         ${OpenCV_LIBS}
@@ -186,5 +181,3 @@ target_link_libraries(
         -lavformat -lavcodec -lswresample -lavutil -lpthread
         -lz -lc -lrt
 )
-
-target_link_libraries(main ${PROJECT_NAME} ${OpenCV_LIBS} stdc++fs -ltbb -lstdc++ -lpthread -lm -ldl -lswscale -lavformat -lavcodec -lswresample -lavutil -lpthread -lz -lc -lrt)
