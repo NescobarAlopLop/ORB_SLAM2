@@ -32,6 +32,7 @@ static int dataset_int;
 static int kf_trajectory_int;
 static int skip_frames = 0;
 static int new_pnp = 0;
+static int new_pnp_int = 0;
 
 string vocabularyPath;
 string datasetPath;
@@ -225,9 +226,10 @@ void parse_arguments(int argc, char* const* argv)
 				{"dataset", optional_argument, &dataset_int, 'd'},
 				{"kf_trajectory_path", optional_argument, &kf_trajectory_int, 't'},
 				{"skip-frames", optional_argument, &skip_frames, 's'},
+				{"new-pnp", optional_argument, &new_pnp_int, 'n'},
 
 				/* These options set a flag. */
-				{"new_pnp", no_argument, &new_pnp, 1},
+//				{"new_pnp", no_argument, &new_pnp, 1},
 				{"verbose", no_argument, &verbose_flag, 1},
 				{"brief", no_argument, &verbose_flag, 0},
 				{"help", no_argument, nullptr, 'h'},
@@ -237,7 +239,7 @@ void parse_arguments(int argc, char* const* argv)
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "m:i:c:v:d:t:s:h",
+		c = getopt_long (argc, argv, "m:i:c:v:d:t:s:n:h",
 			long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -284,6 +286,10 @@ void parse_arguments(int argc, char* const* argv)
 		case 't':
 			printf ("option -t with value `%s'\n", optarg);
 			kf_trajectory_path = optarg;
+			break;
+		case 'n':
+			printf ("option -n with value `%s'\n", optarg);
+			new_pnp = stoi(optarg);
 			break;
 
 		case 's':

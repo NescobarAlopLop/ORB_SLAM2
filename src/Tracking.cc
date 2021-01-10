@@ -297,7 +297,8 @@ namespace ORB_SLAM2
             bool old_bOK;
 
             // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
-            if(!mbOnlyTracking)
+//            if(!mbOnlyTracking)
+            if(false)
             {
                 // Local Mapping is activated. This is the normal behaviour, unless
                 // you explicitly activate the "only tracking" mode.
@@ -329,6 +330,13 @@ namespace ORB_SLAM2
 					case 1:
 						bOK = RelocalizationNewPnP();
 						break;
+					case 2:
+						bOK = RelocalizationNewPnP();
+						bOK = Relocalization();
+					case 3:
+						bOK = Relocalization();
+						bOK = RelocalizationNewPnP();
+						break;
 					default:
 						new_bOK = RelocalizationNewPnP();
 					}
@@ -338,7 +346,8 @@ namespace ORB_SLAM2
             {
                 // Localization Mode: Local Mapping is deactivated
 
-                if(mState==LOST)
+//                if(mState==LOST)
+                if(true)
                 {
 					switch (pnp_version)
 					{
@@ -346,6 +355,14 @@ namespace ORB_SLAM2
 						bOK = Relocalization();
 						break;
 					case 1:
+						bOK = RelocalizationNewPnP();
+						break;
+					case 2:
+						bOK = RelocalizationNewPnP();
+						bOK = Relocalization();
+						break;
+					case 3:
+						bOK = Relocalization();
 						bOK = RelocalizationNewPnP();
 						break;
 					default:
@@ -398,6 +415,14 @@ namespace ORB_SLAM2
 						case 1:
 							bOKReloc = RelocalizationNewPnP();
 							break;
+						case 2:
+							bOK = RelocalizationNewPnP();
+							bOK = Relocalization();
+							break;
+						case 3:
+							bOK = Relocalization();
+							bOK = RelocalizationNewPnP();
+							break;
 						default:
 							bOKReloc = RelocalizationNewPnP();
 						}
@@ -432,19 +457,20 @@ namespace ORB_SLAM2
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
             // If we have an initial estimation of the camera pose and matching. Track the local map.
-            if(!mbOnlyTracking)
-            {
-                if(bOK)
-                    bOK = TrackLocalMap();
-            }
-            else
-            {
-                // mbVO true means that there are few matches to MapPoints in the map. We cannot retrieve
-                // a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
-                // the camera we will use the local map again.
-                if(bOK && !mbVO)
-                    bOK = TrackLocalMap();
-            }
+//            if(!mbOnlyTracking)
+//            if(!mbOnlyTracking)
+//            {
+//                if(bOK)
+//                    bOK = TrackLocalMap();
+//            }
+//            else
+//            {
+//                // mbVO true means that there are few matches to MapPoints in the map. We cannot retrieve
+//                // a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
+//                // the camera we will use the local map again.
+//                if(bOK && !mbVO)
+//                    bOK = TrackLocalMap();
+//            }
 
             if(bOK)
                 mState = OK;
@@ -1446,7 +1472,8 @@ namespace ORB_SLAM2
 
                 PnPsolver* pSolver = vpPnPsolvers[i];
                 cv::Mat Tcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
-
+                cout << "old pnp world matrix result" << endl;
+				cout << Tcw << endl;
                 // If Ransac reachs max. iterations discard keyframe
                 if(bNoMore)
                 {
@@ -1671,6 +1698,8 @@ namespace ORB_SLAM2
 				mBestTcw = cv::Mat::eye(4,4,CV_32F);
 				cvR.copyTo(mBestTcw.rowRange(0,3).colRange(0,3));
 				cvt.copyTo(mBestTcw.rowRange(0,3).col(3));
+				cout << "New pnp world matrix result" << endl;
+				cout << mBestTcw << endl;
 
 				if(cost >= cost_threashold)
 				{
