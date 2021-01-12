@@ -25,7 +25,7 @@
 #include<chrono>
 
 #include<opencv2/core/core.hpp>
-#include <unistd.h>
+
 #include<System.h>
 
 using namespace std;
@@ -134,7 +134,6 @@ int main(int argc, char **argv)
 
     // Save camera trajectory
     SLAM.SaveTrajectoryTUM("CameraTrajectory.txt");
-    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");   
 
     return 0;
 }

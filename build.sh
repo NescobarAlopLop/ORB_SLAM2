@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 echo "Configuring and building Thirdparty/DBoW2 ..."
 
 cd Thirdparty/DBoW2
@@ -29,4 +28,8 @@ echo "Configuring and building ORB_SLAM2 ..."
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j
+make -j$(nproc)
+cd ..
+
+echo "Converting vocabulary to binary"
+./tools/bin_vocabulary

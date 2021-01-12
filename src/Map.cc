@@ -19,115 +19,202 @@
 */
 
 #include "Map.h"
-
+#define TEST_DATA 0xdeadbeef
 #include<mutex>
-
 namespace ORB_SLAM2
 {
 
-    Map::Map():mnMaxKFid(0),mnBigChangeIdx(0)
+Map::Map():mnMaxKFid(0)
+{
+}
+
+template<class Archive>
+    void Map::save(Archive & ar, const unsigned int version) const
     {
+        unsigned int test_data = TEST_DATA;
+        int nItems = mspMapPoints.size();
+        ar & nItems;
+        cout << "{INFO}mspMapPoints size = " << nItems << endl;
+
+        std::for_each(mspMapPoints.begin(), mspMapPoints.end(), [&ar](MapPoint* pMapPoint) {
+            ar & *pMapPoint;
+        });
+        
+        nItems = mspKeyFrames.size();
+        cout << "{INFO}mspKeyFrames size = " << nItems << endl;
+        ar & nItems;
+        std::for_each(mspKeyFrames.begin(), mspKeyFrames.end(), [&ar](KeyFrame* pKeyFrame) {
+            ar & *pKeyFrame;
+        });
+
+        nItems = mvpKeyFrameOrigins.size();
+        cout << "{INFO}mvpKeyFrameOrigins size = " << nItems << endl;
+        ar & nItems;
+        std::for_each(mvpKeyFrameOrigins.begin(), mvpKeyFrameOrigins.end(), [&ar](KeyFrame* pKeyFrameOrigin) {
+            ar & *pKeyFrameOrigin;
+        });
+        // Pertaining to map drawing
+        //nItems = mvpReferenceMapPoints.size();
+        //cout << "$${INFO}mvpReferenceMapPoints size = %d " << nItems << endl;
+        //ar & nItems;
+        //std::for_each(mvpReferenceMapPoints.begin(), mvpReferenceMapPoints.end(), [&ar](MapPoint* pMapPointReference) {
+        //    ar & *pMapPointReference;
+        //});
+        ar & const_cast<long unsigned int &> (mnMaxKFid);
+
+        ar & test_data;
     }
 
-    void Map::AddKeyFrame(KeyFrame *pKF)
+    template<class Archive>
+    void Map::load(Archive & ar, const unsigned int version)
     {
-        unique_lock<mutex> lock(mMutexMap);
-        mspKeyFrames.insert(pKF);
-        if(pKF->mnId>mnMaxKFid)
-            mnMaxKFid=pKF->mnId;
+        unsigned int test_data;
+
+        int nItems;
+        ar & nItems;
+        cout << "{INFO}mspMapPoints size = " << nItems << endl;
+        
+        for (int i = 0; i < nItems; ++i) {
+            
+            MapPoint* pMapPoint = new MapPoint();
+            ar & *pMapPoint;
+            mspMapPoints.insert(pMapPoint);
+        }
+        
+        ar & nItems;
+        cout << "{INFO}mspKeyFrames size = " << nItems << endl;
+
+        for (int i = 0; i < nItems; ++i) {
+
+            KeyFrame* pKeyFrame = new KeyFrame;
+            ar & *pKeyFrame;
+            mspKeyFrames.insert(pKeyFrame);
+        }     
+          
+
+        ar & nItems;
+        cout << "{INFO}mvpKeyFrameOrigins size = " << nItems << endl;
+
+        for (int i = 0; i < nItems; ++i) {             
+
+            KeyFrame* pKeyFrame = new KeyFrame;
+            ar & *pKeyFrame;
+			/* TODO : VerifyHere*/
+            mvpKeyFrameOrigins.push_back(*mspKeyFrames.begin());
+        }     
+
+        ar & const_cast<long unsigned int &> (mnMaxKFid);
+
+        ar & test_data;
+        if (test_data == TEST_DATA)
+            cout <<">>Map Loading Validated as True" << endl;
+        else
+            cout <<"ERROR Map Loading Validated as False: Got -" << test_data << " :( Check Load Save sequence" << endl;
+
     }
 
-    void Map::AddMapPoint(MapPoint *pMP)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspMapPoints.insert(pMP);
-    }
 
-    void Map::EraseMapPoint(MapPoint *pMP)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspMapPoints.erase(pMP);
+// Explicit template instantiation
+template void Map::save<boost::archive::binary_oarchive>(
+	boost::archive::binary_oarchive &, 
+	const unsigned int) const;
+template void Map::save<boost::archive::binary_iarchive>(
+	boost::archive::binary_iarchive &, 
+	const unsigned int) const;
+template void Map::load<boost::archive::binary_oarchive>(
+	boost::archive::binary_oarchive &, 
+	const unsigned int);
+template void Map::load<boost::archive::binary_iarchive>(
+	boost::archive::binary_iarchive &, 
+	const unsigned int);
 
-        // TODO: This only erase the pointer.
-        // Delete the MapPoint
-    }
+void Map::AddKeyFrame(KeyFrame *pKF)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspKeyFrames.insert(pKF);
+    if(pKF->mnId>mnMaxKFid)
+        mnMaxKFid=pKF->mnId;
+}
 
-    void Map::EraseKeyFrame(KeyFrame *pKF)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspKeyFrames.erase(pKF);
+void Map::AddMapPoint(MapPoint *pMP)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspMapPoints.insert(pMP);
+}
 
-        // TODO: This only erase the pointer.
-        // Delete the MapPoint
-    }
+void Map::EraseMapPoint(MapPoint *pMP)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspMapPoints.erase(pMP);
 
-    void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mvpReferenceMapPoints = vpMPs;
-    }
+    // TODO: This only erase the pointer.
+    // Delete the MapPoint
+}
 
-    void Map::InformNewBigChange()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mnBigChangeIdx++;
-    }
+void Map::EraseKeyFrame(KeyFrame *pKF)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspKeyFrames.erase(pKF);
 
-    int Map::GetLastBigChangeIdx()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return mnBigChangeIdx;
-    }
+    // TODO: This only erase the pointer.
+    // Delete the MapPoint
+}
 
-    vector<KeyFrame*> Map::GetAllKeyFrames()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
-    }
+void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mvpReferenceMapPoints = vpMPs;
+}
 
-    vector<MapPoint*> Map::GetAllMapPoints()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
-    }
+vector<KeyFrame*> Map::GetAllKeyFrames()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
+}
 
-    long unsigned int Map::MapPointsInMap()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return mspMapPoints.size();
-    }
+vector<MapPoint*> Map::GetAllMapPoints()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
+}
 
-    long unsigned int Map::KeyFramesInMap()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return mspKeyFrames.size();
-    }
+long unsigned int Map::MapPointsInMap()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return mspMapPoints.size();
+}
 
-    vector<MapPoint*> Map::GetReferenceMapPoints()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return mvpReferenceMapPoints;
-    }
+long unsigned int Map::KeyFramesInMap()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return mspKeyFrames.size();
+}
 
-    long unsigned int Map::GetMaxKFid()
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        return mnMaxKFid;
-    }
+vector<MapPoint*> Map::GetReferenceMapPoints()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return mvpReferenceMapPoints;
+}
 
-    void Map::clear()
-    {
-        for(set<MapPoint*>::iterator sit=mspMapPoints.begin(), send=mspMapPoints.end(); sit!=send; sit++)
-            delete *sit;
+long unsigned int Map::GetMaxKFid()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return mnMaxKFid;
+}
 
-        for(set<KeyFrame*>::iterator sit=mspKeyFrames.begin(), send=mspKeyFrames.end(); sit!=send; sit++)
-            delete *sit;
+void Map::clear()
+{
+    for(set<MapPoint*>::iterator sit=mspMapPoints.begin(), send=mspMapPoints.end(); sit!=send; sit++)
+        delete *sit;
 
-        mspMapPoints.clear();
-        mspKeyFrames.clear();
-        mnMaxKFid = 0;
-        mvpReferenceMapPoints.clear();
-        mvpKeyFrameOrigins.clear();
-    }
+    for(set<KeyFrame*>::iterator sit=mspKeyFrames.begin(), send=mspKeyFrames.end(); sit!=send; sit++)
+        delete *sit;
+
+    mspMapPoints.clear();
+    mspKeyFrames.clear();
+    mnMaxKFid = 0;
+    mvpReferenceMapPoints.clear();
+    mvpKeyFrameOrigins.clear();
+}
 
 } //namespace ORB_SLAM
