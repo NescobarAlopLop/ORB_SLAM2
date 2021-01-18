@@ -1590,17 +1590,16 @@ namespace ORB_SLAM2
 				}
 				else
 				{
-					std::vector<cv::Point2f> temp2d;
-					std::vector<cv::Point3f> temp3d;
-					std::vector<cv::Point3f> templines;
+					std::vector<Eigen::Vector3d> points;
+					std::vector<Eigen::Vector3d> lines;
+					vector<double> weights;
+					std::vector<int> indices;
+
 					for (std::size_t mapPointIndex = 0; mapPointIndex < vvpMapPointMatches[i].size(); ++mapPointIndex)
 					{
 						if (vvpMapPointMatches[i][mapPointIndex] != nullptr)
 						{
-							temp2d.emplace_back(cv::Point2d(mCurrentFrame.mvKeys[mapPointIndex].pt.x, mCurrentFrame.mvKeys[mapPointIndex].pt.y));
-
 							auto location = ORB_SLAM2::Converter::toVector3d(vvpMapPointMatches[i][mapPointIndex]->GetWorldPos());
-							temp3d.emplace_back(location.x(), location.y(), location.z());
 
 							cv::Mat invK = CameraMatrix.inv();
 							cv::Mat pt = (cv::Mat_<float>(3, 1) << mCurrentFrame.mvKeys[mapPointIndex].pt.x, mCurrentFrame.mvKeys[mapPointIndex].pt.y, 1);
@@ -1608,21 +1607,13 @@ namespace ORB_SLAM2
 
 							templine = templine / norm(templine);
 							cv::Point3f v(templine);
-							templines.push_back(v);
+
+							points.emplace_back(location.x(), location.y(), location.z());
+							lines.emplace_back(v.x, v.y, v.z);
+
+							weights.push_back(1);
+							indices.push_back(mapPointIndex);
 						}
-					}
-					std::vector<Eigen::Vector3d> points;
-					std::vector<Eigen::Vector3d> lines;
-					vector<double> weights;
-					std::vector<int> indices;
-
-					for (std::size_t p_indx = 0; p_indx < temp3d.size(); p_indx++)
-					{
-						points.emplace_back(temp3d[p_indx].x, temp3d[p_indx].y, temp3d[p_indx].z);
-						lines.emplace_back(templines[p_indx].x, templines[p_indx].y, templines[p_indx].z);
-
-						weights.push_back(1);
-						indices.push_back(p_indx);
 					}
 
 					auto pnp_input = PnP::PnpInput::init(std::move(points), std::move(lines), std::move(weights), std::move(indices));
