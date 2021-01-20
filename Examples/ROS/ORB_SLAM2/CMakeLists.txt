@@ -3,6 +3,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
+set(CMAKE_CXX_STANDARD 17)
 IF(NOT ROS_BUILD_TYPE)
     SET(ROS_BUILD_TYPE Release)
 ENDIF()
@@ -42,11 +43,28 @@ find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 
 include_directories(
+        ${EIGEN3_INCLUDE_DIR}
         ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/../../../
         ${PROJECT_SOURCE_DIR}/../../../include
         ${Pangolin_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/Utils_pnp
 )
+
+add_library(${PROJECT_NAME} SHARED
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/DualVar.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/LogDetHessianMatrix.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/PnpBarrierMethodSolver.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/PnpInput.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/PnpLocalSearch.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/PnpResult.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/PnpObjective.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/PnpProblemSolver.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/PnP/QuaternionVector.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/Utils_pnp/GeneralUtils.cpp
+        ${PROJECT_SOURCE_DIR}/../../../Thirdparty/track_drone/Utils_pnp/Parsing.cpp
+        )
 
 set(LIBS
         ${OpenCV_LIBS}

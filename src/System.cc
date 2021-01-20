@@ -147,17 +147,9 @@ namespace ORB_SLAM2
             }
         }
 
-        // Check reset
-        {
-            unique_lock<mutex> lock(mMutexReset);
-            if(mbReset)
-            {
-                mpTracker->Reset();
-                mbReset = false;
-            }
-        }
-
-        cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
+		checkReset();
+		checkSaveMap();
+		cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
 
         unique_lock<mutex> lock2(mMutexState);
         mTrackingState = mpTracker->mState;
@@ -198,17 +190,10 @@ namespace ORB_SLAM2
             }
         }
 
-        // Check reset
-        {
-            unique_lock<mutex> lock(mMutexReset);
-            if(mbReset)
-            {
-                mpTracker->Reset();
-                mbReset = false;
-            }
-        }
+		checkReset();
+		checkSaveMap();
 
-        cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp);
+		cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp);
 
         unique_lock<mutex> lock2(mMutexState);
         mTrackingState = mpTracker->mState;
@@ -249,15 +234,8 @@ namespace ORB_SLAM2
             }
         }
 
-        // Check reset
-        {
-            unique_lock<mutex> lock(mMutexReset);
-            if(mbReset)
-            {
-                mpTracker->Reset();
-                mbReset = false;
-            }
-        }
+        checkReset();
+		checkSaveMap();
 
         cv::Mat Tcw = mpTracker->GrabImageMonocular(im,timestamp, pnp_version);
 
@@ -268,6 +246,26 @@ namespace ORB_SLAM2
 
         return Tcw;
     }
+
+    void System::checkReset()
+	{
+		unique_lock<mutex> lock(mMutexReset);
+		if(mbReset)
+		{
+			mpTracker->Reset();
+			mbReset = false;
+		}
+	}
+
+	void System::checkSaveMap()
+	{
+    	unique_lock<mutex> lock(mMutexSaveMap);
+    	if(mbSaveMap)
+		{
+    		this->SaveMap("LastMap");
+    		mbSaveMap = false;
+		}
+	}
 
     void System::ActivateLocalizationMode()
     {
@@ -299,6 +297,52 @@ namespace ORB_SLAM2
         unique_lock<mutex> lock(mMutexReset);
         mbReset = true;
     }
+
+	void System::SaveMap(const string &filename)
+	{
+		//		mpMap->Save(
+//			//
+//			);
+		unique_lock<mutex> lock(mMutexSaveMap);
+		mbSaveMap = true;
+//		std::ofstream os(filename);
+		std::ofstream os("LastMap.map");
+		{
+			::boost::archive::binary_oarchive oa(os, ::boost::archive::no_header);
+			//oa << mpKeyFrameDatabase;
+			oa << mpMap;
+		}
+		cout << endl << "Map saved to " << filename << endl;
+
+	}
+
+	void System::LoadMap(const string &filename)
+	{
+		{
+//			std::ifstream is(filename);
+			std::ifstream is("LastMap.map");
+
+
+			boost::archive::binary_iarchive ia(is, boost::archive::no_header);
+			//ia >> mpKeyFrameDatabase;
+			ia >> mpMap;
+
+		}
+
+		// std::ifstream fin("Slam_latest_Map.bin", ios::binary);
+		// ostringstream ostrm;
+
+		// ostrm << fin.rdbuf();
+
+		// cout << ostrm << endl;
+		// cout << endl << filename <<" : Map Loaded!" << endl;
+
+		std::fstream file("Slam_latest_Map.bin", ios::binary);
+		auto my_str = string();
+		copy_n(std::istream_iterator<char>(file), 5, std::back_inserter(my_str));
+		cout << my_str << endl;
+
+	}
 
     void System::Shutdown()
     {
@@ -351,10 +395,10 @@ namespace ORB_SLAM2
 
         // For each frame we have a reference keyframe (lRit), the timestamp (lT) and a flag
         // which is true when tracking failed (lbL).
-        list<ORB_SLAM2::KeyFrame*>::iterator lRit = mpTracker->mlpReferences.begin();
-        list<double>::iterator lT = mpTracker->mlFrameTimes.begin();
-        list<bool>::iterator lbL = mpTracker->mlbLost.begin();
-        for(list<cv::Mat>::iterator lit=mpTracker->mlRelativeFramePoses.begin(),
+        auto lRit = mpTracker->mlpReferences.begin();
+        auto lT = mpTracker->mlFrameTimes.begin();
+        auto lbL = mpTracker->mlbLost.begin();
+        for(auto lit=mpTracker->mlRelativeFramePoses.begin(),
                     lend=mpTracker->mlRelativeFramePoses.end();lit!=lend;lit++, lRit++, lT++, lbL++)
         {
             if(*lbL)
@@ -445,9 +489,9 @@ namespace ORB_SLAM2
 
         // For each frame we have a reference keyframe (lRit), the timestamp (lT) and a flag
         // which is true when tracking failed (lbL).
-        list<ORB_SLAM2::KeyFrame*>::iterator lRit = mpTracker->mlpReferences.begin();
-        list<double>::iterator lT = mpTracker->mlFrameTimes.begin();
-        for(list<cv::Mat>::iterator lit=mpTracker->mlRelativeFramePoses.begin(), lend=mpTracker->mlRelativeFramePoses.end();lit!=lend;lit++, lRit++, lT++)
+        auto lRit = mpTracker->mlpReferences.begin();
+        auto lT = mpTracker->mlFrameTimes.begin();
+        for(auto lit=mpTracker->mlRelativeFramePoses.begin(), lend=mpTracker->mlRelativeFramePoses.end();lit!=lend;lit++, lRit++, lT++)
         {
             ORB_SLAM2::KeyFrame* pKF = *lRit;
 

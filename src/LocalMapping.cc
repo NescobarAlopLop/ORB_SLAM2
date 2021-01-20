@@ -639,9 +639,8 @@ namespace ORB_SLAM2
         // We only consider close stereo points
         vector<KeyFrame*> vpLocalKeyFrames = mpCurrentKeyFrame->GetVectorCovisibleKeyFrames();
 
-        for(vector<KeyFrame*>::iterator vit=vpLocalKeyFrames.begin(), vend=vpLocalKeyFrames.end(); vit!=vend; vit++)
+        for(auto pKF : vpLocalKeyFrames)
         {
-            KeyFrame* pKF = *vit;
             if(pKF->mnId==0)
                 continue;
             const vector<MapPoint*> vpMapPoints = pKF->GetMapPointMatches();
@@ -669,12 +668,12 @@ namespace ORB_SLAM2
                             const int &scaleLevel = pKF->mvKeysUn[i].octave;
                             const map<KeyFrame*, size_t> observations = pMP->GetObservations();
                             int nObs=0;
-                            for(map<KeyFrame*, size_t>::const_iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+                            for(auto observation : observations)
                             {
-                                KeyFrame* pKFi = mit->first;
+                                KeyFrame* pKFi = observation.first;
                                 if(pKFi==pKF)
                                     continue;
-                                const int &scaleLeveli = pKFi->mvKeysUn[mit->second].octave;
+                                const int &scaleLeveli = pKFi->mvKeysUn[observation.second].octave;
 
                                 if(scaleLeveli<=scaleLevel+1)
                                 {

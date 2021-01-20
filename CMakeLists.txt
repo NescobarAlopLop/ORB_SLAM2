@@ -43,6 +43,10 @@ endif()
 find_package(Pangolin REQUIRED)
 include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/track_drone/eigen-3.3.7)
 
+find_package(Boost  1.54.0  	     # Minimum or EXACT version e.g. 1.36.0
+        REQUIRED             					# Fail with error if Boost is not found
+        COMPONENTS serialization 				# Boost libraries by their canonical name
+        )
 include_directories(
 ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
@@ -94,6 +98,7 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+${Boost_LIBRARIES}
 )
 
 # Build examples

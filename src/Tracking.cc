@@ -523,8 +523,10 @@ namespace ORB_SLAM2
         }
 
         // Store frame pose information to retrieve the complete camera trajectory afterwards.
-        if(!mCurrentFrame.mTcw.empty())
-        {
+//        if(!mCurrentFrame.mTcw.empty())
+		if(!mCurrentFrame.mTcw.empty() && mCurrentFrame.mpReferenceKF)
+
+			{
             cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
             mlRelativeFramePoses.push_back(Tcr);
             mlpReferences.push_back(mpReferenceKF);
@@ -1803,7 +1805,7 @@ namespace ORB_SLAM2
         if(mpInitializer)
         {
             delete mpInitializer;
-            mpInitializer = static_cast<Initializer*>(NULL);
+            mpInitializer = static_cast<Initializer*>(nullptr);
         }
 
         mlRelativeFramePoses.clear();

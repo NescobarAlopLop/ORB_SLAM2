@@ -67,13 +67,15 @@ namespace ORB_SLAM2
         glEnable (GL_BLEND);
         glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175));
+        pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(200));
         pangolin::Var<bool> menuFollowCamera("menu.Follow Camera",true,true);
         pangolin::Var<bool> menuShowPoints("menu.Show Points",true,true);
         pangolin::Var<bool> menuShowKeyFrames("menu.Show KeyFrames",true,true);
         pangolin::Var<bool> menuShowGraph("menu.Show Graph",true,true);
         pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
         pangolin::Var<bool> menuReset("menu.Reset",false,false);
+        pangolin::Var<bool> saveTumTrajectory("menu.save TUM trajectory(not for mono)",false,false);
+        pangolin::Var<bool> saveMap("menu.save map",false,false);
 
         // Define Camera Render Object (for view / scene browsing)
         pangolin::OpenGlRenderState s_cam(
@@ -155,6 +157,18 @@ namespace ORB_SLAM2
                 mpSystem->Reset();
                 menuReset = false;
             }
+
+            if(saveTumTrajectory)
+			{
+				saveTumTrajectory = false;
+				mpSystem->SaveTrajectoryTUM("TUM_trajectory.csv");
+			}
+
+            if (saveMap)
+			{
+            	saveMap = false;
+            	mpSystem->SaveMap("LastMap");
+			}
 
             if(Stop())
             {
