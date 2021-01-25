@@ -1,7 +1,6 @@
 #include <getopt.h>
 #include<iostream>
 #include<algorithm>
-#include<fstream>
 
 #include<chrono>
 
@@ -97,7 +96,7 @@ int main(int argc, char **argv)
 	int apiID = cv::CAP_ANY;      // 0 = autodetect default API
 
 
-	int totalImages = 2000;
+	uint totalImages = 2000;
 	switch(mode)
 	{
 	case OperationModes::LIVE_CAM:
@@ -127,7 +126,7 @@ int main(int argc, char **argv)
 	cout << "Start processing sequence ..." << endl;
 
 	double tframe;
-	for(int ni = 0; ni < totalImages; ++ni)
+	for(uint ni = 0; ni < totalImages; ++ni)
 	{
 		// Read image from camera
 		if (mode == OperationModes::DATASET)
@@ -143,6 +142,7 @@ int main(int argc, char **argv)
 		else
 		{
 			cap.read(im);
+			tframe = 0;
 		}
 
 		if(im.empty())
