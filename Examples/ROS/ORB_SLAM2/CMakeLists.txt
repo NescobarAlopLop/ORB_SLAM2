@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.4.6)
+cmake_minimum_required(VERSION 2.8)
 project(ORB_SLAM2_ROS)
 
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
@@ -47,6 +47,7 @@ include_directories(
         ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/../../../
         ${PROJECT_SOURCE_DIR}/../../../include
+        ${EIGEN3_INCLUDE_DIR}
         ${Pangolin_INCLUDE_DIRS}
 )
 
