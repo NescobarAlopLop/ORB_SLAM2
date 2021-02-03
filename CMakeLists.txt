@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(ORB_SLAM2)
-
+set(CMAKE_CXX_STANDARD 17)
 IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release)
+   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
@@ -38,6 +38,10 @@ endif()
 
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
+find_package(Boost  1.54.0  	     # Minimum or EXACT version e.g. 1.36.0
+        REQUIRED             					# Fail with error if Boost is not found
+        COMPONENTS serialization 				# Boost libraries by their canonical name
+        )
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -76,7 +80,9 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
-)
+        ${Boost_LIBRARIES}
+        )
+
 
 # Build examples
 

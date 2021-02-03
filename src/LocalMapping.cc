@@ -86,18 +86,18 @@ namespace ORB_SLAM2
                     KeyFrameCulling();
                 }
 
-                mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
-            }
-            else if(Stop())
+            mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
+        }
+        else if(Stop())
+        {
+            // Safe area to stop
+            while(isStopped() && !CheckFinish())
             {
-                // Safe area to stop
-                while(isStopped() && !CheckFinish())
-                {
-                    usleep(3000);
-                }
-                if(CheckFinish())
-                    break;
+                usleep(5000);
             }
+            if(CheckFinish())
+                break;
+        }
 
             ResetIfRequested();
 
