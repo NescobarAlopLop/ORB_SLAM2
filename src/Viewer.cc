@@ -28,11 +28,11 @@
 namespace ORB_SLAM2
 {
 
-    Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath):
-            mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),
-            mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false)
-    {
-        cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
+Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath, bool bReuse):
+    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),
+    mbFinishRequested(false), mbFinished(true), mbStopped(false), mbStopRequested(false)
+{
+    cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
 
         float fps = fSettings["Camera.fps"];
         if(fps<1)
@@ -47,16 +47,16 @@ namespace ORB_SLAM2
             mImageHeight = 480;
         }
 
-        mViewpointX = fSettings["Viewer.ViewpointX"];
-        mViewpointY = fSettings["Viewer.ViewpointY"];
-        mViewpointZ = fSettings["Viewer.ViewpointZ"];
-        mViewpointF = fSettings["Viewer.ViewpointF"];
-    }
+    mViewpointX = fSettings["Viewer.ViewpointX"];
+    mViewpointY = fSettings["Viewer.ViewpointY"];
+    mViewpointZ = fSettings["Viewer.ViewpointZ"];
+    mViewpointF = fSettings["Viewer.ViewpointF"];
+    mbReuse = bReuse;
+}
 
-    void Viewer::Run()
-    {
-        mbFinished = false;
-        mbStopped = false;
+void Viewer::Run()
+{
+    mbFinished = false;
 
         pangolin::CreateWindowAndBind("ORB-SLAM2: Map Viewer",1024,768);
 
@@ -67,13 +67,13 @@ namespace ORB_SLAM2
         glEnable (GL_BLEND);
         glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175));
-        pangolin::Var<bool> menuFollowCamera("menu.Follow Camera",true,true);
-        pangolin::Var<bool> menuShowPoints("menu.Show Points",true,true);
-        pangolin::Var<bool> menuShowKeyFrames("menu.Show KeyFrames",true,true);
-        pangolin::Var<bool> menuShowGraph("menu.Show Graph",true,true);
-        pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
-        pangolin::Var<bool> menuReset("menu.Reset",false,false);
+    pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175));
+    pangolin::Var<bool> menuFollowCamera("menu.Follow Camera",true,true);
+    pangolin::Var<bool> menuShowPoints("menu.Show Points",true,true);
+    pangolin::Var<bool> menuShowKeyFrames("menu.Show KeyFrames",true,true);
+    pangolin::Var<bool> menuShowGraph("menu.Show Graph",true,true);
+    pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",mbReuse,true);
+    pangolin::Var<bool> menuReset("menu.Reset",false,false);
 
         // Define Camera Render Object (for view / scene browsing)
         pangolin::OpenGlRenderState s_cam(
@@ -91,13 +91,12 @@ namespace ORB_SLAM2
 
         cv::namedWindow("ORB-SLAM2: Current Frame");
 
-        bool bFollow = true;
-        bool bLocalizationMode = false;
+    bool bFollow = true;
+    bool bLocalizationMode = mbReuse;
 
-//    while(1)
-        while(true)
-        {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    while(1)
+    {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             mpMapDrawer->GetCurrentOpenGLCameraMatrix(Twc);
 

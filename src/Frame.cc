@@ -310,8 +310,8 @@ namespace ORB_SLAM2
         if(viewCos<viewingCosLimit)
             return false;
 
-        // Predict scale in the image
-        const int nPredictedLevel = pMP->PredictScale(dist,this);
+    // Predict scale in the image
+    const int nPredictedLevel = pMP->PredictScale(dist,mfLogScaleFactor);
 
         // Data used by the tracking
         pMP->mbTrackInView = true;
@@ -468,9 +468,7 @@ namespace ORB_SLAM2
         mvuRight = vector<float>(N,-1.0f);
         mvDepth = vector<float>(N,-1.0f);
 
-        const int thOrbDist = (ORBmatcher::TH_HIGH+ORBmatcher::TH_LOW)/2;
-
-        const int nRows = mpORBextractorLeft->mvImagePyramid[0].rows;
+    const int nRows = mpORBextractorLeft->mvImagePyramid[0].rows;
 
         //Assign keypoints to row table
         vector<vector<size_t> > vRowIndices(nRows,vector<size_t>());
@@ -492,10 +490,10 @@ namespace ORB_SLAM2
                 vRowIndices[yi].push_back(iR);
         }
 
-        // Set limits for search
-        const float minZ = mb;
-        const float minD = 0;
-        const float maxD = mbf/minZ;
+    // Set limits for search
+    const float minZ = mb;
+    const float minD = -3;
+    const float maxD = mbf/minZ;
 
         // For each left keypoint search a match in the right image
         vector<pair<int, int> > vDistIdx;
@@ -548,15 +546,15 @@ namespace ORB_SLAM2
                 }
             }
 
-            // Subpixel match by correlation
-            if(bestDist<thOrbDist)
-            {
-                // coordinates in image pyramid at keypoint scale
-                const float uR0 = mvKeysRight[bestIdxR].pt.x;
-                const float scaleFactor = mvInvScaleFactors[kpL.octave];
-                const float scaleduL = round(kpL.pt.x*scaleFactor);
-                const float scaledvL = round(kpL.pt.y*scaleFactor);
-                const float scaleduR0 = round(uR0*scaleFactor);
+        // Subpixel match by correlation
+        if(bestDist<ORBmatcher::TH_HIGH)
+        {
+            // coordinates in image pyramid at keypoint scale
+            const float uR0 = mvKeysRight[bestIdxR].pt.x;
+            const float scaleFactor = mvInvScaleFactors[kpL.octave];
+            const float scaleduL = round(kpL.pt.x*scaleFactor);
+            const float scaledvL = round(kpL.pt.y*scaleFactor);
+            const float scaleduR0 = round(uR0*scaleFactor);
 
                 // sliding window search
                 const int w = 5;
@@ -609,19 +607,19 @@ namespace ORB_SLAM2
 
                 float disparity = (uL-bestuR);
 
-                if(disparity>=minD && disparity<maxD)
+            if(disparity>=0 && disparity<maxD)
+            {
+                if(disparity<=0)
                 {
-                    if(disparity<=0)
-                    {
-                        disparity=0.01;
-                        bestuR = uL-0.01;
-                    }
-                    mvDepth[iL]=mbf/disparity;
-                    mvuRight[iL] = bestuR;
-                    vDistIdx.push_back(pair<int,int>(bestDist,iL));
+                    disparity=0.01;
+                    bestuR = uL-0.01;
                 }
+                mvDepth[iL]=mbf/disparity;
+                mvuRight[iL] = bestuR;
+                vDistIdx.push_back(pair<int,int>(bestDist,iL));
             }
         }
+    }
 
         sort(vDistIdx.begin(),vDistIdx.end());
         const float median = vDistIdx[vDistIdx.size()/2].first;

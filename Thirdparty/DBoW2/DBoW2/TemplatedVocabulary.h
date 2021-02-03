@@ -247,6 +247,19 @@ public:
   void saveToTextFile(const std::string &filename) const;  
 
   /**
+   * Loads the vocabulary from a binary file
+   * @param filename
+   */
+  bool loadFromBinaryFile(const std::string &filename);
+
+  /**
+   * Saves the vocabulary into a binary file
+   * @param filename
+   */
+  void saveToBinaryFile(const std::string &filename) const;
+
+
+  /**
    * Saves the vocabulary into a file
    * @param filename
    */

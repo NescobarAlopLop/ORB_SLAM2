@@ -949,17 +949,17 @@ namespace ORB_SLAM2
                 }
             }
 
-            // Covisibility graph edges
-            const vector<KeyFrame*> vpConnectedKFs = pKF->GetCovisiblesByWeight(minFeat);
-            for(vector<KeyFrame*>::const_iterator vit=vpConnectedKFs.begin(); vit!=vpConnectedKFs.end(); vit++)
+        // Covisibility graph edges
+        const vector<KeyFrame*> vpConnectedKFs = pKF->GetCovisiblesByWeight(minFeat);
+        for(vector<KeyFrame*>::const_iterator vit=vpConnectedKFs.begin(); vit!=vpConnectedKFs.end(); vit++)
+        {
+            KeyFrame* pKFn = *vit;
+            if(pParentKF && pKFn && pKFn!=pParentKF && !pKF->hasChild(pKFn) && !sLoopEdges.count(pKFn))
             {
-                KeyFrame* pKFn = *vit;
-                if(pKFn && pKFn!=pParentKF && !pKF->hasChild(pKFn) && !sLoopEdges.count(pKFn))
+                if(!pKFn->isBad() && pKFn->mnId<pKF->mnId)
                 {
-                    if(!pKFn->isBad() && pKFn->mnId<pKF->mnId)
-                    {
-                        if(sInsertedEdges.count(make_pair(min(pKF->mnId,pKFn->mnId),max(pKF->mnId,pKFn->mnId))))
-                            continue;
+                    if(sInsertedEdges.count(make_pair(min(pKF->mnId,pKFn->mnId),max(pKF->mnId,pKFn->mnId))))
+                        continue;
 
                         g2o::Sim3 Snw;
 
@@ -1018,16 +1018,19 @@ namespace ORB_SLAM2
             if(pMP->isBad())
                 continue;
 
-            int nIDr;
-            if(pMP->mnCorrectedByKF==pCurKF->mnId)
-            {
-                nIDr = pMP->mnCorrectedReference;
-            }
-            else
-            {
-                KeyFrame* pRefKF = pMP->GetReferenceKeyFrame();
+        int nIDr;
+        if(pMP->mnCorrectedByKF==pCurKF->mnId)
+        {
+            nIDr = pMP->mnCorrectedReference;
+        }
+        else
+        {
+            KeyFrame* pRefKF = pMP->GetReferenceKeyFrame();
+            if(pRefKF)
                 nIDr = pRefKF->mnId;
-            }
+            else
+                continue;
+        }
 
 
             g2o::Sim3 Srw = vScw[nIDr];
