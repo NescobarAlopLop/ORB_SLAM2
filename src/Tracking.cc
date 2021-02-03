@@ -332,8 +332,8 @@ namespace ORB_SLAM2
 			bool bOK;
 
 			// Initial camera pose estimation using motion model or relocalization (if tracking is lost)
-			if(false)
-//			if(!mbOnlyTracking)
+			// if(false)
+			if(!mbOnlyTracking)
 			{
 				// Local Mapping is activated. This is the normal behaviour, unless
 				// you explicitly activate the "only tracking" mode.
@@ -376,7 +376,8 @@ namespace ORB_SLAM2
 				}
 				else
 				{
-					if(!mbVO)
+//					if(!mbVO)
+					if(false)
 					{
 						// In last frame we tracked enough MapPoints in the map
 
@@ -1788,6 +1789,7 @@ namespace ORB_SLAM2
 					//     DistCoef.resize(5);
 					//     DistCoef.at<float>(4) = k3;
 					// }
+					// added to remove outliers
 					cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);          // output rotation vector
 					cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);    // output translation vector
 					cv::solvePnPRansac(temp3d, temp2d, CameraMatrix, mDistCoef, rvec, tvec,
@@ -1815,19 +1817,6 @@ namespace ORB_SLAM2
 						temp3d_inliers.emplace_back(temp3d[n]);
 					}
 					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-					// std::vector<Eigen::Vector3d> points;
-					// std::vector<Eigen::Vector3d> lines;
-					// vector<double> weights;
-					// std::vector<int> indices;
-
-					// for (std::size_t p_indx = 0; p_indx < temp3d.size(); p_indx++)
-					// {
-					//     points.emplace_back(temp3d[p_indx].x, temp3d[p_indx].y, temp3d[p_indx].z);
-					//     lines.emplace_back(templines[p_indx].x, templines[p_indx].y, templines[p_indx].z);
-
-					//     weights.push_back(1);
-					//     indices.push_back(p_indx);
-					// }
 
 					auto pnp_input = PnP::PnpInput::init(std::move(eigenpoints), std::move(eigenlines), std::move(core_w), std::move(Coreset_Indexes));
 					auto pnp_objective = PnP::PnpObjective::init(pnp_input);
@@ -1870,35 +1859,38 @@ namespace ORB_SLAM2
 				cv::eigen2cv(rotationMatrix,cvR);
 				cv::eigen2cv(translationVector,cvt);
 				auto cost = pnp_res.cost();
+				// uncomment this for opencv pnp
+				// cv::Mat rvec_pnp = cv::Mat::zeros(3, 1, CV_64F);          // output rotation vector
+				// cv::Mat tvec_pnp = cv::Mat::zeros(3, 1, CV_64F);    // output translation vector
+				// cv::solvePnP(all_temp3d_inliers[i],all_temp2d_inliers[i] , CameraMatrix, mDistCoef, rvec_pnp, tvec_pnp,cv::SOLVEPNP_EPNP);
+				// cv::Mat R;
+				// cv::Rodrigues(rvec_pnp, R); // R is 3x3
 
-//				cv::Mat rvec_pnp = cv::Mat::zeros(3, 1, CV_64F);          // output rotation vector
-//				cv::Mat tvec_pnp = cv::Mat::zeros(3, 1, CV_64F);    // output translation vector
-//				cv::solvePnP(all_temp3d_inliers[i],all_temp2d_inliers[i] , CameraMatrix, mDistCoef, rvec_pnp, tvec_pnp,cv::SOLVEPNP_EPNP);
-//				cv::Mat R;
-//				cv::Rodrigues(rvec_pnp, R); // R is 3x3
-//
-//
-//
-//				cout<<"&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
-//				cout<<cvR<<endl;
-//				cout<<cvt<<endl;
-//				cout<<cost<<endl;
-//
-//				cout<<"&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
-//
-//				// cvR = cvR.t();  // rotation of inverse
-//				// cvt=-cvR * cvt;
-//				R = R.t();  // rotation of inverse
-//				tvec_pnp = -R * tvec_pnp; // translation of inverse
+
+
+				cout<<"&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
+				cout<<cvR<<endl;
+				cout<<cvt<<endl;
+				cout<<cost<<endl;
+
+				cout<<"&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
+				// uncomment this for opencv pnp
+				// cvR = cvR.t();  // rotation of inverse
+				// cvt=-cvR * cvt;
+				// R = R.t();  // rotation of inverse
+				// tvec_pnp = -R * tvec_pnp; // translation of inverse
 				cv::Mat mBestTcw;
 				// cout<<R<<endl;
 				// cout<<tvec_pnp<<endl;
 
 				mBestTcw = cv::Mat::eye(4,4,CV_32F);
-				// cvR.copyTo(mBestTcw.rowRange(0,3).colRange(0,3)); //new pnp
-				// cvt.copyTo(mBestTcw.rowRange(0,3).col(3));
-				R.copyTo(mBestTcw.rowRange(0,3).colRange(0,3));
-				tvec_pnp.copyTo(mBestTcw.rowRange(0,3).col(3));
+				// uncomment this for new pnp
+				cvR.copyTo(mBestTcw.rowRange(0,3).colRange(0,3)); //new pnp
+				cvt.copyTo(mBestTcw.rowRange(0,3).col(3));
+
+				// uncomment this for opencv pnp
+				//R.copyTo(mBestTcw.rowRange(0,3).colRange(0,3));
+				//tvec_pnp.copyTo(mBestTcw.rowRange(0,3).col(3));
 				cout << "New pnp world matrix result" << endl;
 				cout << mBestTcw << endl;
 				cout<<" sseeeeeeeeeeeeeeeeeeeeeeeeeee"<<endl;
