@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 2.4.6)
+project(ORB_SLAM2_ROS)
+
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
