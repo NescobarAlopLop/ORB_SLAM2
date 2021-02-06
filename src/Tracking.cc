@@ -535,6 +535,10 @@ namespace ORB_SLAM2
 		else
 		{
 			// This can happen if tracking is lost
+			if (mlRelativeFramePoses.empty() || mlpReferences.empty() || mlFrameTimes.empty())
+			{
+				return;
+			}
 			mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
 			mlpReferences.push_back(mlpReferences.back());
 			mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1645,7 +1649,4 @@ namespace ORB_SLAM2
     {
         mbOnlyTracking = flag;
     }
-
-
-
 } //namespace ORB_SLAM
