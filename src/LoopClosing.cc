@@ -47,10 +47,10 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
     mpMatchedKF = NULL;
 }
 
-    void LoopClosing::SetTracker(Tracking *pTracker)
-    {
-        mpTracker=pTracker;
-    }
+void LoopClosing::SetTracker(Tracking *pTracker)
+{
+    mpTracker=pTracker;
+}
 
     void LoopClosing::SetLocalMapper(LocalMapping *pLocalMapper)
     {
@@ -535,117 +535,117 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
                 }
             }
 
-        }
+    }
 
-        // Project MapPoints observed in the neighborhood of the loop keyframe
-        // into the current keyframe and neighbors using corrected poses.
-        // Fuse duplications.
-        SearchAndFuse(CorrectedSim3);
+    // Project MapPoints observed in the neighborhood of the loop keyframe
+    // into the current keyframe and neighbors using corrected poses.
+    // Fuse duplications.
+    SearchAndFuse(CorrectedSim3);
 
 
-        // After the MapPoint fusion, new links in the covisibility graph will appear attaching both sides of the loop
-        map<KeyFrame*, set<KeyFrame*> > LoopConnections;
+    // After the MapPoint fusion, new links in the covisibility graph will appear attaching both sides of the loop
+    map<KeyFrame*, set<KeyFrame*> > LoopConnections;
 
-        for(vector<KeyFrame*>::iterator vit=mvpCurrentConnectedKFs.begin(), vend=mvpCurrentConnectedKFs.end(); vit!=vend; vit++)
+    for(vector<KeyFrame*>::iterator vit=mvpCurrentConnectedKFs.begin(), vend=mvpCurrentConnectedKFs.end(); vit!=vend; vit++)
+    {
+        KeyFrame* pKFi = *vit;
+        vector<KeyFrame*> vpPreviousNeighbors = pKFi->GetVectorCovisibleKeyFrames();
+
+        // Update connections. Detect new links.
+        pKFi->UpdateConnections();
+        LoopConnections[pKFi]=pKFi->GetConnectedKeyFrames();
+        for(vector<KeyFrame*>::iterator vit_prev=vpPreviousNeighbors.begin(), vend_prev=vpPreviousNeighbors.end(); vit_prev!=vend_prev; vit_prev++)
         {
-            KeyFrame* pKFi = *vit;
-            vector<KeyFrame*> vpPreviousNeighbors = pKFi->GetVectorCovisibleKeyFrames();
-
-            // Update connections. Detect new links.
-            pKFi->UpdateConnections();
-            LoopConnections[pKFi]=pKFi->GetConnectedKeyFrames();
-            for(vector<KeyFrame*>::iterator vit_prev=vpPreviousNeighbors.begin(), vend_prev=vpPreviousNeighbors.end(); vit_prev!=vend_prev; vit_prev++)
-            {
-                LoopConnections[pKFi].erase(*vit_prev);
-            }
-            for(vector<KeyFrame*>::iterator vit2=mvpCurrentConnectedKFs.begin(), vend2=mvpCurrentConnectedKFs.end(); vit2!=vend2; vit2++)
-            {
-                LoopConnections[pKFi].erase(*vit2);
-            }
+            LoopConnections[pKFi].erase(*vit_prev);
         }
+        for(vector<KeyFrame*>::iterator vit2=mvpCurrentConnectedKFs.begin(), vend2=mvpCurrentConnectedKFs.end(); vit2!=vend2; vit2++)
+        {
+            LoopConnections[pKFi].erase(*vit2);
+        }
+    }
 
-        // Optimize graph
-        Optimizer::OptimizeEssentialGraph(mpMap, mpMatchedKF, mpCurrentKF, NonCorrectedSim3, CorrectedSim3, LoopConnections, mbFixScale);
+    // Optimize graph
+    Optimizer::OptimizeEssentialGraph(mpMap, mpMatchedKF, mpCurrentKF, NonCorrectedSim3, CorrectedSim3, LoopConnections, mbFixScale);
 
     // Add loop edge
     mpMatchedKF->AddLoopEdge(mpCurrentKF);
     mpCurrentKF->AddLoopEdge(mpMatchedKF);
 
-        // Launch a new thread to perform Global Bundle Adjustment
-        mbRunningGBA = true;
-        mbFinishedGBA = false;
-        mbStopGBA = false;
-        mpThreadGBA = new thread(&LoopClosing::RunGlobalBundleAdjustment,this,mpCurrentKF->mnId);
+    // Launch a new thread to perform Global Bundle Adjustment
+    mbRunningGBA = true;
+    mbFinishedGBA = false;
+    mbStopGBA = false;
+    mpThreadGBA = new thread(&LoopClosing::RunGlobalBundleAdjustment,this,mpCurrentKF->mnId);
 
-        // Loop closed. Release Local Mapping.
-        mpLocalMapper->Release();
+    // Loop closed. Release Local Mapping.
+    mpLocalMapper->Release();
 
     cout << "Loop Closed!" << endl;
 
     mLastLoopKFid = mpCurrentKF->mnId;
 }
 
-    void LoopClosing::SearchAndFuse(const KeyFrameAndPose &CorrectedPosesMap)
+void LoopClosing::SearchAndFuse(const KeyFrameAndPose &CorrectedPosesMap)
+{
+    ORBmatcher matcher(0.8);
+
+    for(KeyFrameAndPose::const_iterator mit=CorrectedPosesMap.begin(), mend=CorrectedPosesMap.end(); mit!=mend;mit++)
     {
-        ORBmatcher matcher(0.8);
+        KeyFrame* pKF = mit->first;
 
-        for(KeyFrameAndPose::const_iterator mit=CorrectedPosesMap.begin(), mend=CorrectedPosesMap.end(); mit!=mend;mit++)
+        g2o::Sim3 g2oScw = mit->second;
+        cv::Mat cvScw = Converter::toCvMat(g2oScw);
+
+        vector<MapPoint*> vpReplacePoints(mvpLoopMapPoints.size(),static_cast<MapPoint*>(NULL));
+        matcher.Fuse(pKF,cvScw,mvpLoopMapPoints,4,vpReplacePoints);
+
+        // Get Map Mutex
+        unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
+        const int nLP = mvpLoopMapPoints.size();
+        for(int i=0; i<nLP;i++)
         {
-            KeyFrame* pKF = mit->first;
-
-            g2o::Sim3 g2oScw = mit->second;
-            cv::Mat cvScw = Converter::toCvMat(g2oScw);
-
-            vector<MapPoint*> vpReplacePoints(mvpLoopMapPoints.size(),static_cast<MapPoint*>(NULL));
-            matcher.Fuse(pKF,cvScw,mvpLoopMapPoints,4,vpReplacePoints);
-
-            // Get Map Mutex
-            unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
-            const int nLP = mvpLoopMapPoints.size();
-            for(int i=0; i<nLP;i++)
+            MapPoint* pRep = vpReplacePoints[i];
+            if(pRep)
             {
-                MapPoint* pRep = vpReplacePoints[i];
-                if(pRep)
-                {
-                    pRep->Replace(mvpLoopMapPoints[i]);
-                }
+                pRep->Replace(mvpLoopMapPoints[i]);
             }
         }
     }
+}
 
 
-    void LoopClosing::RequestReset()
-    {
-        {
-            unique_lock<mutex> lock(mMutexReset);
-            mbResetRequested = true;
-        }
-
-        while(1)
-        {
-            {
-                unique_lock<mutex> lock2(mMutexReset);
-                if(!mbResetRequested)
-                    break;
-            }
-            usleep(5000);
-        }
-    }
-
-    void LoopClosing::ResetIfRequested()
+void LoopClosing::RequestReset()
+{
     {
         unique_lock<mutex> lock(mMutexReset);
-        if(mbResetRequested)
-        {
-            mlpLoopKeyFrameQueue.clear();
-            mLastLoopKFid=0;
-            mbResetRequested=false;
-        }
+        mbResetRequested = true;
     }
 
-    void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
+    while(1)
     {
-        cout << "Starting Global Bundle Adjustment" << endl;
+        {
+        unique_lock<mutex> lock2(mMutexReset);
+        if(!mbResetRequested)
+            break;
+        }
+        usleep(5000);
+    }
+}
+
+void LoopClosing::ResetIfRequested()
+{
+    unique_lock<mutex> lock(mMutexReset);
+    if(mbResetRequested)
+    {
+        mlpLoopKeyFrameQueue.clear();
+        mLastLoopKFid=0;
+        mbResetRequested=false;
+    }
+}
+
+void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
+{
+    cout << "Starting Global Bundle Adjustment" << endl;
 
     Optimizer::GlobalBundleAdjustemnt(mpMap,20,&mbStopGBA,nLoopKF,false);
 
@@ -657,23 +657,23 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
         unique_lock<mutex> lock(mMutexGBA);
 
 
-            if(!mbStopGBA)
+        if(!mbStopGBA)
+        {
+            cout << "Global Bundle Adjustment finished" << endl;
+            cout << "Updating map ..." << endl;
+            mpLocalMapper->RequestStop();
+            // Wait until Local Mapping has effectively stopped
+
+            while(!mpLocalMapper->isStopped() && !mpLocalMapper->isFinished())
             {
-                cout << "Global Bundle Adjustment finished" << endl;
-                cout << "Updating map ..." << endl;
-                mpLocalMapper->RequestStop();
-                // Wait until Local Mapping has effectively stopped
+                usleep(1000);
+            }
 
-                while(!mpLocalMapper->isStopped() && !mpLocalMapper->isFinished())
-                {
-                    usleep(1000);
-                }
+            // Get Map Mutex
+            unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
-                // Get Map Mutex
-                unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
-
-                // Correct keyframes starting at map first keyframe
-                list<KeyFrame*> lpKFtoCheck(mpMap->mvpKeyFrameOrigins.begin(),mpMap->mvpKeyFrameOrigins.end());
+            // Correct keyframes starting at map first keyframe
+            list<KeyFrame*> lpKFtoCheck(mpMap->mvpKeyFrameOrigins.begin(),mpMap->mvpKeyFrameOrigins.end());
 
             while(!lpKFtoCheck.empty())
             {
@@ -693,17 +693,17 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
                         pChild->mTcwGBA = Tchildc*pKF->mTcwGBA;//*Tcorc*pKF->mTcwGBA;
                         pChild->mnBAGlobalForKF=nLoopKF;
 
-                        }
-                        lpKFtoCheck.push_back(pChild);
                     }
-
-                    pKF->mTcwBefGBA = pKF->GetPose();
-                    pKF->SetPose(pKF->mTcwGBA);
-                    lpKFtoCheck.pop_front();
+                    lpKFtoCheck.push_back(pChild);
                 }
 
-                // Correct MapPoints
-                const vector<MapPoint*> vpMPs = mpMap->GetAllMapPoints();
+                pKF->mTcwBefGBA = pKF->GetPose();
+                pKF->SetPose(pKF->mTcwGBA);
+                lpKFtoCheck.pop_front();
+            }
+
+            // Correct MapPoints
+            const vector<MapPoint*> vpMPs = mpMap->GetAllMapPoints();
 
             for(size_t i=0; i<vpMPs.size(); i++)
             {
@@ -711,8 +711,8 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
                 if(!pMP)
                     continue;
 
-                    if(pMP->isBad())
-                        continue;
+                if(pMP->isBad())
+                    continue;
 
                 if(pMP->mnBAGlobalForKF==nLoopKF)
                 {
@@ -737,15 +737,15 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
                         continue;
 
 
-                        // Map to non-corrected camera
-                        cv::Mat Rcw = pRefKF->mTcwBefGBA.rowRange(0,3).colRange(0,3);
-                        cv::Mat tcw = pRefKF->mTcwBefGBA.rowRange(0,3).col(3);
-                        cv::Mat Xc = Rcw*pMP->GetWorldPos()+tcw;
+                    // Map to non-corrected camera
+                    cv::Mat Rcw = pRefKF->mTcwBefGBA.rowRange(0,3).colRange(0,3);
+                    cv::Mat tcw = pRefKF->mTcwBefGBA.rowRange(0,3).col(3);
+                    cv::Mat Xc = Rcw*pMP->GetWorldPos()+tcw;
 
-                        // Backproject using corrected camera
-                        cv::Mat Twc = pRefKF->GetPoseInverse();
-                        cv::Mat Rwc = Twc.rowRange(0,3).colRange(0,3);
-                        cv::Mat twc = Twc.rowRange(0,3).col(3);
+                    // Backproject using corrected camera
+                    cv::Mat Twc = pRefKF->GetPoseInverse();
+                    cv::Mat Rwc = Twc.rowRange(0,3).colRange(0,3);
+                    cv::Mat twc = Twc.rowRange(0,3).col(3);
 
                         pMP->SetWorldPos(Rwc*Xc+twc);
                     }
@@ -753,37 +753,37 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
 
             mpLocalMapper->Release();
 
-                cout << "Map updated!" << endl;
-            }
-
-            mbFinishedGBA = true;
-            mbRunningGBA = false;
+            cout << "Map updated!" << endl;
         }
-    }
 
-    void LoopClosing::RequestFinish()
-    {
-        unique_lock<mutex> lock(mMutexFinish);
-        mbFinishRequested = true;
+        mbFinishedGBA = true;
+        mbRunningGBA = false;
     }
+}
 
-    bool LoopClosing::CheckFinish()
-    {
-        unique_lock<mutex> lock(mMutexFinish);
-        return mbFinishRequested;
-    }
+void LoopClosing::RequestFinish()
+{
+    unique_lock<mutex> lock(mMutexFinish);
+    mbFinishRequested = true;
+}
 
-    void LoopClosing::SetFinish()
-    {
-        unique_lock<mutex> lock(mMutexFinish);
-        mbFinished = true;
-    }
+bool LoopClosing::CheckFinish()
+{
+    unique_lock<mutex> lock(mMutexFinish);
+    return mbFinishRequested;
+}
 
-    bool LoopClosing::isFinished()
-    {
-        unique_lock<mutex> lock(mMutexFinish);
-        return mbFinished;
-    }
+void LoopClosing::SetFinish()
+{
+    unique_lock<mutex> lock(mMutexFinish);
+    mbFinished = true;
+}
+
+bool LoopClosing::isFinished()
+{
+    unique_lock<mutex> lock(mMutexFinish);
+    return mbFinished;
+}
 
 
 } //namespace ORB_SLAM

@@ -124,12 +124,21 @@ cv::Mat FrameDrawer::DrawFrame()
     cv::Mat imWithInfo;
     DrawTextInfo(im,state, imWithInfo);
 
+	imwrite("/tmp/orb_frame_" + to_string(frame_number) + ".jpg", imWithInfo);
+	frame_number++;
+
     return imWithInfo;
 }
 
 
 void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 {
+	int top, bottom, left, right;
+	top = (int) (0.01*im.rows); bottom = top;
+	left = (int) (0.01*im.cols); right = left;
+	cv::Scalar red(0, 0, 240);
+	cv::Scalar color(0, 240, 0);
+
     stringstream s;
     if(nState==Tracking::NO_IMAGES_YET)
         s << " WAITING FOR IMAGES";
@@ -149,6 +158,7 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
     }
     else if(nState==Tracking::LOST)
     {
+		color = red;
         s << " TRACK LOST. TRYING TO RELOCALIZE ";
     }
     else if(nState==Tracking::SYSTEM_NOT_READY)
@@ -159,7 +169,9 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
     int baseline=0;
     cv::Size textSize = cv::getTextSize(s.str(),cv::FONT_HERSHEY_PLAIN,1,1,&baseline);
 
-    imText = cv::Mat(im.rows+textSize.height+10,im.cols,im.type());
+	copyMakeBorder( im, im, top, bottom, left, right, 0,  color);
+
+	imText = cv::Mat(im.rows+textSize.height+10,im.cols,im.type());
     im.copyTo(imText.rowRange(0,im.rows).colRange(0,im.cols));
     imText.rowRange(im.rows,imText.rows) = cv::Mat::zeros(textSize.height+10,im.cols,im.type());
     cv::putText(imText,s.str(),cv::Point(5,imText.rows-5),cv::FONT_HERSHEY_PLAIN,1,cv::Scalar(255,255,255),1,8);

@@ -68,8 +68,8 @@ public:
 	friend class boost::serialization::access;
 
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
-    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const bool reuse= false);
-
+    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const bool reuse= false, const int pnp_version=-1);
+	std::string window_name;
     // Proccess the given stereo frame. Images must be synchronized and rectified.
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Returns the camera pose (empty if tracking fails).
@@ -84,7 +84,7 @@ public:
     // Proccess the given monocular frame
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Returns the camera pose (empty if tracking fails).
-    cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp);
+    cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp, const int pnp_version=0);
 
     // This stops local mapping thread (map building) and performs only camera tracking.
     void ActivateLocalizationMode();
@@ -140,8 +140,9 @@ public:
     int GetTrackingState();
     std::vector<MapPoint*> GetTrackedMapPoints();
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
+	int pnp_version;
 
-private:
+ private:
 
     // Input sensor
     eSensor mSensor;
@@ -188,11 +189,11 @@ private:
     bool mbActivateLocalizationMode;
     bool mbDeactivateLocalizationMode;
 
-    // Tracking state
-    int mTrackingState;
-    std::vector<MapPoint*> mTrackedMapPoints;
-    std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
-    std::mutex mMutexState;
+//    // Tracking state
+//    int mTrackingState;
+//    std::vector<MapPoint*> mTrackedMapPoints;
+//    std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
+//    std::mutex mMutexState;
 };
 
 }// namespace ORB_SLAM

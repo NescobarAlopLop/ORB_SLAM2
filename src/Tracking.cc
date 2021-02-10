@@ -241,7 +241,7 @@ namespace ORB_SLAM2
     }
 
 
-    cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
+    cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, const int pnp_version)
     {
         mImGray = im;
 
@@ -265,7 +265,7 @@ namespace ORB_SLAM2
         else
             mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-        Track();
+        Track(pnp_version);
 
 		/* Do Pose calculation */
 		if(mState==OK && !mCurrentFrame.mTcw.empty() && mCurrentFrame.mpReferenceKF)
@@ -297,7 +297,7 @@ namespace ORB_SLAM2
 			return mCurrentFrame.mTcw.clone();
 	}
 
-    void Tracking::Track()
+    void Tracking::Track(const int pnp_version)
     {
         if(mState==NO_IMAGES_YET)
         {
@@ -334,6 +334,7 @@ namespace ORB_SLAM2
             // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
             if(!mbOnlyTracking)
             {
+            	cout << "line 337: mbOnlyTracking value: " << mbOnlyTracking << endl;
                 // Local Mapping is activated. This is the normal behaviour, unless
                 // you explicitly activate the "only tracking" mode.
 
@@ -355,20 +356,40 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-                    bOK = Relocalization();
+					switch (pnp_version)
+					{
+					case 0:
+						bOK = Relocalization();
+						break;
+					case 1:
+						bOK = RelocalizationNewPnP();
+						break;
+					default:
+						bOK = Relocalization();
+					}
                 }
             }
             else
             {
-                // Localization Mode: Local Mapping is deactivated
-
+                // Localization Mode: Local Mapping is deactivated aka only tracking
+				cout << "Localization mode, line 365" << endl;
                 if(mState==LOST)
                 {
-                    bOK = Relocalization();
-                }
+					switch (pnp_version)
+					{
+					case 0:
+						bOK = Relocalization();
+						break;
+					case 1:
+						bOK = RelocalizationNewPnP();
+						break;
+					default:
+						bOK = Relocalization();
+					}
+				}
                 else
                 {
-                    if(!mbVO)
+                    if(!mbVO and !bOnlyPNP) // if only pnp enabled skip those localization techniques
                     {
                         // In last frame we tracked enough MapPoints in the map
 
@@ -394,14 +415,26 @@ namespace ORB_SLAM2
                         vector<MapPoint*> vpMPsMM;
                         vector<bool> vbOutMM;
                         cv::Mat TcwMM;
-                        if(!mVelocity.empty())
+                        if(!mVelocity.empty() && !bOnlyPNP)
                         {
+                        	cout << "Line 400: mVelocity not empty, so computing with motion model" << endl;
                             bOKMM = TrackWithMotionModel();
                             vpMPsMM = mCurrentFrame.mvpMapPoints;
                             vbOutMM = mCurrentFrame.mvbOutlier;
                             TcwMM = mCurrentFrame.mTcw.clone();
                         }
-                        bOKReloc = Relocalization();
+
+						switch (pnp_version)
+						{
+							case 0:
+								bOKReloc = Relocalization();
+								break;
+							case 1:
+								bOKReloc = RelocalizationNewPnP();
+								break;
+							default:
+								bOKReloc = Relocalization();
+						}
 
                         if(bOKMM && !bOKReloc)
                         {
@@ -545,12 +578,7 @@ namespace ORB_SLAM2
 			mlbLost.push_back(mState==LOST);
 		}
 	}
-#if 0
-	cv::Mat Tracking::getTransformData()
-{
-        return mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
-}
-#endif
+
 
 
     void Tracking::StereoInitialization()
@@ -649,7 +677,7 @@ namespace ORB_SLAM2
 			// Check if there are enough correspondences
 			if(nmatches<100)
 			{
-				cout << __FUNCTION__ << "ORB extraction : No enough correspondesnces(<100) " << nmatches << endl;
+				cout << __FUNCTION__ << "ORB extraction : Not enough correspondesnces(<100) " << nmatches << endl;
 				delete mpInitializer;
 				mpInitializer = static_cast<Initializer*>(NULL);
 				return;
@@ -858,7 +886,8 @@ namespace ORB_SLAM2
 
         mLastFrame.SetPose(Tlr*pRef->GetPose());
 
-		if(mnLastKeyFrameId==mLastFrame.mnId || mSensor==System::MONOCULAR)
+		if(mnLastKeyFrameId==mLastFrame.mnId || mSensor==System::MONOCULAR || !mbOnlyTracking) // Check why this was changed
+//		if(mnLastKeyFrameId==mLastFrame.mnId || mSensor==System::MONOCULAR)
 			return;
 
         // Create "visual odometry" MapPoints
@@ -1505,6 +1534,7 @@ namespace ORB_SLAM2
                     int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
 
                     if(nGood<10)
+//                    if(nGood<4)
                         continue;
 
                     for(int io =0; io<mCurrentFrame.N; io++)
@@ -1546,6 +1576,7 @@ namespace ORB_SLAM2
 
                     // If the pose is supported by enough inliers stop ransacs and continue
                     if(nGood>=50)
+//                    if(nGood>=5)
                     {
                         bMatch = true;
                         break;
@@ -1567,6 +1598,336 @@ namespace ORB_SLAM2
 		}
 
     }
+
+	bool Tracking::RelocalizationNewPnP()
+	{
+		auto pnp = PnP::PnpProblemSolver::init();
+
+		// Compute Bag of Words Vector
+		mCurrentFrame.ComputeBoW();
+
+		// Relocalization is performed when tracking is lost
+		// Track Lost: Query KeyFrame Database for keyframe candidates for relocalisation
+		vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectRelocalizationCandidates(&mCurrentFrame);
+
+		if(vpCandidateKFs.empty())
+			return false;
+
+		const int nKFs = vpCandidateKFs.size();
+
+		// We perform first an ORB matching with each candidate
+		// If enough matches are found we setup a PnP solver
+		ORBmatcher matcher(0.9,true);
+
+		vector<std::shared_ptr<PnP::PnpObjective>> vpNewPnPsolvers;
+		std::vector<std::vector<cv::Point2f>> all_temp2d_inliers;
+		std::vector<std::vector<cv::Point3f>> all_temp3d_inliers;
+		vpNewPnPsolvers.resize(nKFs);
+		all_temp2d_inliers.resize(nKFs);
+		all_temp3d_inliers.resize(nKFs);
+		vector<vector<MapPoint*> > vvpMapPointMatches;
+		vvpMapPointMatches.resize(nKFs);
+
+		vector<bool> vbDiscarded;
+		vbDiscarded.resize(nKFs);
+
+		int nCandidates=0;
+
+		float values[9] =
+			{
+				mCurrentFrame.fx, 0, mCurrentFrame.cx,
+				0, mCurrentFrame.fy, mCurrentFrame.cy,
+				0, 0, 1
+			};
+		cv::Mat CameraMatrix(3, 3, CV_32FC1, values);
+
+		for(int i=0; i<nKFs; i++)
+		{
+			if(vpCandidateKFs[i]->isBad())
+				vbDiscarded[i] = true;
+			else
+			{
+				//              this->mpMap->GetAllMapPoints();
+				int nmatches = matcher.SearchByBoW(vpCandidateKFs[i],mCurrentFrame,vvpMapPointMatches[i]);
+				if(nmatches<15)
+				{
+					vbDiscarded[i] = true;
+					continue;
+				}
+				else
+				{
+					std::vector<cv::Point2f> temp2d;
+					std::vector<cv::Point3f> temp3d;
+					std::vector<cv::Point2f> temp2d_inliers;
+					std::vector<cv::Point3f> temp3d_inliers;
+					std::vector<cv::Point3f> templines;
+					cv::Mat inliers_idx;
+
+					for (std::size_t mapPointIndex = 0; mapPointIndex < vvpMapPointMatches[i].size(); ++mapPointIndex)
+					{
+						if (vvpMapPointMatches[i][mapPointIndex] != nullptr)
+						{
+							temp2d.emplace_back(cv::Point2d(mCurrentFrame.mvKeys[mapPointIndex].pt.x, mCurrentFrame.mvKeys[mapPointIndex].pt.y));
+
+							auto location = ORB_SLAM2::Converter::toVector3d(vvpMapPointMatches[i][mapPointIndex]->GetWorldPos());
+							temp3d.emplace_back(location.x(), location.y(), location.z());
+//							cout<<"POOOIIINNNTTT"<<endl;
+//							cout<<location.x()<<" , "<< location.y()<<" , "<<location.z()<<endl;
+
+							cv::Mat invK = CameraMatrix.inv();
+							cv::Mat pt = (cv::Mat_<float>(3, 1) << mCurrentFrame.mvKeys[mapPointIndex].pt.x, mCurrentFrame.mvKeys[mapPointIndex].pt.y, 1);
+							cv::Mat templine = invK * pt;
+
+							templine = templine / norm(templine);
+							cv::Point3f v(templine);
+							templines.push_back(v);
+
+						}
+					}
+					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&7
+
+					//  use solve pnp ransac to find inliers
+					// initial approximations of the rotation and translation vectors
+					// float values_dist[5] ={DistCoef.at<float>(0),DistCoef.at<float>(1),DistCoef.at<float>(2),DistCoef.at<float>(3),DistCoef.at<float>(4)};
+					// cv::Mat distCoeffs(5, 1, CV_64F, values_dist);
+					// // cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64F);  // vector of distortion coefficients
+					// cv::Mat DistCoef(4,1,CV_32F);
+					// DistCoef.at<float>(0) = fSettings["Camera.k1"];
+					// DistCoef.at<float>(1) = fSettings["Camera.k2"];
+					// DistCoef.at<float>(2) = fSettings["Camera.p1"];
+					// DistCoef.at<float>(3) = fSettings["Camera.p2"];
+					// const float k3 = fSettings["Camera.k3"];
+					// if(k3!=0)
+					// {
+					//     DistCoef.resize(5);
+					//     DistCoef.at<float>(4) = k3;
+					// }
+					// added to remove outliers
+					cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);          // output rotation vector
+					cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);    // output translation vector
+					cv::solvePnPRansac(temp3d, temp2d, CameraMatrix, mDistCoef, rvec, tvec,
+						false, 100, 10, 0.7,
+						inliers_idx, cv::SOLVEPNP_EPNP );
+					rvec.~Mat();
+					tvec.~Mat();
+					// distCoeffs.~Mat();
+//					if(inliers_idx.rows<8)
+					if(inliers_idx.rows<5)
+					{
+						vbDiscarded[i] = true;
+						continue;
+					}
+					std::vector<Eigen::Vector3d> eigenpoints;
+					std::vector<Eigen::Vector3d> eigenlines;
+					std::vector<double> core_w( inliers_idx.rows,1);
+					std::vector<int> Coreset_Indexes(inliers_idx.rows);
+					std::iota (std::begin(Coreset_Indexes), std::end(Coreset_Indexes), 0); // Fill with 0, 1, ..., inliers_idx.rows.
+					// update inliers for PnP and use vector<Eigen::Vector3d> instead of opencv data type
+					for (int inliers_index = 0; inliers_index < inliers_idx.rows; ++inliers_index) {
+						int n = inliers_idx.at<int>(inliers_index);// i-inlier
+						eigenpoints.emplace_back(temp3d[n].x, temp3d[n].y, temp3d[n].z);
+						eigenlines.emplace_back(templines[n].x, templines[n].y, templines[n].z);
+						temp2d_inliers.emplace_back(temp2d[n]);
+						temp3d_inliers.emplace_back(temp3d[n]);
+					}
+					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+					auto pnp_input = PnP::PnpInput::init(std::move(eigenpoints), std::move(eigenlines), std::move(core_w), std::move(Coreset_Indexes));
+					auto pnp_objective = PnP::PnpObjective::init(pnp_input);
+
+					vpNewPnPsolvers[i] = pnp_objective;
+					all_temp2d_inliers[i]=temp2d_inliers;
+					all_temp3d_inliers[i]=temp3d_inliers;
+					nCandidates++;
+				}
+			}
+		}
+		// Alternatively perform some iterations of P4P RANSAC
+		// Until we found a camera pose supported by enough inliers
+		bool bMatch = false;
+		ORBmatcher matcher2(0.9,true);
+		int try_count = 5;
+		float cost_threashold = 0.008;
+//		float cost_threashold = 20.;
+
+		while(nCandidates>0 && !bMatch)
+		{
+			for(int i=0; i<nKFs; i++)
+			{
+				if(vbDiscarded[i])
+					continue;
+				bool bNoMore;
+
+				// uncomment this for new_pnp
+				auto barrier_method_settings = PnP::BarrierMethodSettings::init();
+				barrier_method_settings->epsilon = 4E-8;
+				barrier_method_settings->verbose = false;
+
+
+				// change for solve_pnp with ransac
+				auto pnp_res = pnp->solve_pnp(vpNewPnPsolvers[i], barrier_method_settings);
+				// ---
+				cout<<" soooooooooooooooooooooooolllllllllveeeeeeeeeeed"<<endl;
+				auto rotationMatrix = pnp_res.rotation_matrix().transpose().eval();
+				auto translationVector = pnp_res.translation_vector();
+
+				cv::Mat new_pnp_R(3,3,CV_32F), new_pnp_t(3,1,CV_32F);
+				cv::eigen2cv(rotationMatrix,new_pnp_R);
+				cv::eigen2cv(translationVector,new_pnp_t);
+				auto cost = pnp_res.cost();
+				// uncomment this for new_pnp END
+
+
+				// uncomment this for opencv pnp
+				 cv::Mat rvec_pnp = cv::Mat::zeros(3, 1, CV_64F);		// output rotation vector
+				 cv::Mat tvec_pnp = cv::Mat::zeros(3, 1, CV_64F);    // output translation vector
+				 cv::solvePnP(all_temp3d_inliers[i],all_temp2d_inliers[i] , CameraMatrix, mDistCoef, rvec_pnp, tvec_pnp,cv::SOLVEPNP_EPNP);
+				 cv::Mat cvR;
+				 cv::Rodrigues(rvec_pnp, cvR); // R is 3x3
+				// uncomment this for opencv pnp END
+
+
+				cout<<"&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
+				cout << new_pnp_R << endl;
+				cout << new_pnp_t << endl;
+				cout<<cost<<endl;
+
+				cout<<"&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
+				// uncomment this for opencv pnp
+//				 cvR = cvR.t();  // rotation of inverse
+//				 cvt=-cvR * cvt;
+//				 R = R.t();  // rotation of inverse
+//				 tvec_pnp = -R * tvec_pnp; // translation of inverse
+				// uncomment this for opencv pnp END
+
+				cv::Mat mBestTcw;
+				cv::Mat mBestTcwOld;
+				// cout<<R<<endl;
+				// cout<<tvec_pnp<<endl;
+
+				mBestTcw = cv::Mat::eye(4,4,CV_32F);
+				mBestTcwOld = cv::Mat::eye(4,4,CV_32F);
+				// uncomment this for new pnp
+				new_pnp_R.copyTo(mBestTcw.rowRange(0,3).colRange(0,3)); //new pnp
+				new_pnp_t.copyTo(mBestTcw.rowRange(0,3).col(3));
+
+				cvR.copyTo(mBestTcwOld.rowRange(0,3).colRange(0,3)); //new pnp
+				tvec_pnp.copyTo(mBestTcwOld.rowRange(0,3).col(3));
+
+				for (int i=0; i < mBestTcwOld.rows; ++i)
+				{
+					std::cout << mBestTcw.row(i) << "\t\t| " << mBestTcwOld.row(i) << std::endl;
+				}
+				// uncomment this for opencv pnp
+				//R.copyTo(mBestTcw.rowRange(0,3).colRange(0,3));
+				//tvec_pnp.copyTo(mBestTcw.rowRange(0,3).col(3));
+				// uncomment this for opencv pnp END
+
+				if(cost >= cost_threashold)
+				{
+					cout << "BAD COST:    bNoMore cost is " << cost << endl;
+					vbDiscarded[i]=true;
+					nCandidates--;
+				}
+
+				// If a Camera Pose is computed, optimize
+				if(cost < cost_threashold && try_count > 0)
+				{
+					try_count--;
+					mBestTcw.copyTo(mCurrentFrame.mTcw);
+
+					set<MapPoint*> sFound;
+
+					// options:
+					// - either wrap our solution with ransac
+					//      - random choose part of input points - lines pairs
+					//      - choose inliears accordingly
+					// - either copy all of the keypoints
+					for(int j=0; j<vvpMapPointMatches[i].size(); j++)
+					{
+						mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];
+						sFound.insert(vvpMapPointMatches[i][j]);
+					}
+
+					int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+					cout << "\tnGood " << nGood << endl;
+					if(nGood<10)
+//					if(nGood<4)
+						continue;
+
+					for(int io =0; io<mCurrentFrame.N; io++)
+						if(mCurrentFrame.mvbOutlier[io])
+							mCurrentFrame.mvpMapPoints[io]=static_cast<MapPoint*>(NULL);
+
+					// If few inliers, search by projection in a coarse window and optimize again
+					if(nGood<50 && try_count > 0)
+					{
+						try_count--;
+						int nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,10,100);
+
+						if(nadditional+nGood>=50)
+						{
+							nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+
+							// If many inliers but still not enough, search by projection again in a narrower window
+							// the camera has been already optimized with many points
+							if(nGood>30 && nGood<50)
+							{
+								sFound.clear();
+								for(int ip =0; ip<mCurrentFrame.N; ip++)
+									if(mCurrentFrame.mvpMapPoints[ip])
+										sFound.insert(mCurrentFrame.mvpMapPoints[ip]);
+								nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,3,64);
+
+								// Final optimization
+								if(nGood+nadditional>=50)
+								{
+									nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+
+									for(int io =0; io<mCurrentFrame.N; io++)
+										if(mCurrentFrame.mvbOutlier[io])
+											mCurrentFrame.mvpMapPoints[io]=NULL;
+								}
+							}
+						}
+						cout << "IMPROVE COST   nGOOD < 50, cost " << cost << endl;
+					}
+
+
+					// If the pose is supported by enough inliers stop ransacs and continue
+					if(nGood>=50)
+//					if(nGood>=5)
+					{
+						bMatch = true;
+						cout << "GOOD COST     nGOOD >= 50, cost " << cost << endl;
+						break;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					cout << "new_pnp BAD cost is , try_count " << try_count << endl;
+
+					return false;
+				}
+			}
+		}
+
+		if(!bMatch)
+		{
+			return false;
+		}
+		else
+		{
+			mnLastRelocFrameId = mCurrentFrame.mnId;
+			return true;
+		}
+		return false;
+	}
+
 
 	void Tracking::Reset()
 	{
@@ -1609,8 +1970,9 @@ namespace ORB_SLAM2
         mlFrameTimes.clear();
         mlbLost.clear();
 
-		mpViewer->Release();
-	}
+        if(mpViewer)
+            mpViewer->Release();
+    }
 
     void Tracking::ChangeCalibration(const string &strSettingPath)
     {

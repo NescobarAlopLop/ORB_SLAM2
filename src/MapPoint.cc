@@ -293,16 +293,16 @@ MapPoint::MapPoint(const cv::Mat &Pos, Map* pMap, Frame* pFrame, const int &idxF
     mNormalVector = mWorldPos - Ow;
     mNormalVector = mNormalVector/cv::norm(mNormalVector);
 
-        cv::Mat PC = Pos - Ow;
-        const float dist = cv::norm(PC);
-        const int level = pFrame->mvKeysUn[idxF].octave;
-        const float levelScaleFactor =  pFrame->mvScaleFactors[level];
-        const int nLevels = pFrame->mnScaleLevels;
+    cv::Mat PC = Pos - Ow;
+    const float dist = cv::norm(PC);
+    const int level = pFrame->mvKeysUn[idxF].octave;
+    const float levelScaleFactor =  pFrame->mvScaleFactors[level];
+    const int nLevels = pFrame->mnScaleLevels;
 
-        mfMaxDistance = dist*levelScaleFactor;
-        mfMinDistance = mfMaxDistance/pFrame->mvScaleFactors[nLevels-1];
+    mfMaxDistance = dist*levelScaleFactor;
+    mfMinDistance = mfMaxDistance/pFrame->mvScaleFactors[nLevels-1];
 
-        pFrame->mDescriptors.row(idxF).copyTo(mDescriptor);
+    pFrame->mDescriptors.row(idxF).copyTo(mDescriptor);
 
     // MapPoints can be created from Tracking and Local Mapping. This recursive_mutex avoid conflicts with id.
     unique_lock<mutex> lock(mpMap->mMutexPointCreation);
@@ -606,25 +606,25 @@ MapPoint::MapPoint(const cv::Mat &Pos, Map* pMap, Frame* pFrame, const int &idxF
     const float levelScaleFactor =  pRefKF->mvScaleFactors[level];
     const int nLevels = pRefKF->mnScaleLevels;
 
-        {
-            unique_lock<mutex> lock3(mMutexPos);
-            mfMaxDistance = dist*levelScaleFactor;
-            mfMinDistance = mfMaxDistance/pRefKF->mvScaleFactors[nLevels-1];
-            mNormalVector = normal/n;
-        }
-    }
-
-    float MapPoint::GetMinDistanceInvariance()
     {
-        unique_lock<mutex> lock(mMutexPos);
-        return 0.8f*mfMinDistance;
+        unique_lock<mutex> lock3(mMutexPos);
+        mfMaxDistance = dist*levelScaleFactor;
+        mfMinDistance = mfMaxDistance/pRefKF->mvScaleFactors[nLevels-1];
+        mNormalVector = normal/n;
     }
+}
 
-    float MapPoint::GetMaxDistanceInvariance()
-    {
-        unique_lock<mutex> lock(mMutexPos);
-        return 1.2f*mfMaxDistance;
-    }
+float MapPoint::GetMinDistanceInvariance()
+{
+    unique_lock<mutex> lock(mMutexPos);
+    return 0.8f*mfMinDistance;
+}
+
+float MapPoint::GetMaxDistanceInvariance()
+{
+    unique_lock<mutex> lock(mMutexPos);
+    return 1.2f*mfMaxDistance;
+}
 
 int MapPoint::PredictScale(const float &currentDist, const float &logScaleFactor)
 {

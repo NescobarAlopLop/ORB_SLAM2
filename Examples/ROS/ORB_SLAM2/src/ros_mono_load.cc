@@ -96,27 +96,28 @@ void ImageGrabber::PublishPose(cv::Mat Tcw)
 		//mlbLost.push_back(mState==LOST);
 	}
 }
-
+int pnp_version = 0;
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "Mono");
-	ros::start();
 	bool bReuseMap = false;
 
-	if (argc < 4)
+	if (argc < 5)
 	{
-		cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings" << endl;
+		cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings reuse_map pnp_version" << endl;
 		ros::shutdown();
 		return 1;
 	}
 
 	// Create SLAM system. It initializes all system threads and gets ready to process frames.
-	// if (!strcmp(argv[3], "true"))
-	//    {
-	// 	bReuseMap = true;
-	// }
-	bReuseMap = true;
-	ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true, bReuseMap);
+	 if (!strcmp(argv[3], "true"))
+	    {
+	 	bReuseMap = true;
+	 }
+	pnp_version = stoi(argv[4]);
+	ros::init(argc, argv, "Mono" + to_string(pnp_version));
+	ros::start();
+
+	ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true, bReuseMap, pnp_version);
 	//cerr << endl << "HERE" << endl;
 	//   if (bReuseMap)
 	// SLAM.LoadMap("Slam_latest_Map.bin");
@@ -169,7 +170,7 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 	cv::Mat firimg = cv_ptr->image;
 	cv::imwrite("/home/fares/PycharmProjects/Point-Tracker/Data/allframes/img" + imname + ".jpg", cv_ptr->image);
 	// firas end
-	cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+	cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec(), pnp_version);
 	PublishPose(pose);
 	//usleep(10000);
 	if (pose.empty())
@@ -260,5 +261,3 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 	framenum++;
 
 }
-
-

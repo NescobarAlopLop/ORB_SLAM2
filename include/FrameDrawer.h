@@ -66,6 +66,8 @@ protected:
     Map* mpMap;
 
     std::mutex mMutex;
+
+    int frame_number = 0;
 };
 
 } //namespace ORB_SLAM

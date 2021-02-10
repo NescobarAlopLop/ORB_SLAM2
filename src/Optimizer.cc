@@ -880,48 +880,48 @@ namespace ORB_SLAM2
             }
         }
 
-        // Set normal edges
-        for(size_t i=0, iend=vpKFs.size(); i<iend; i++)
+    // Set normal edges
+    for(size_t i=0, iend=vpKFs.size(); i<iend; i++)
+    {
+        KeyFrame* pKF = vpKFs[i];
+
+        const int nIDi = pKF->mnId;
+
+        g2o::Sim3 Swi;
+
+        LoopClosing::KeyFrameAndPose::const_iterator iti = NonCorrectedSim3.find(pKF);
+
+        if(iti!=NonCorrectedSim3.end())
+            Swi = (iti->second).inverse();
+        else
+            Swi = vScw[nIDi].inverse();
+
+        KeyFrame* pParentKF = pKF->GetParent();
+
+        // Spanning tree edge
+        if(pParentKF)
         {
-            KeyFrame* pKF = vpKFs[i];
+            int nIDj = pParentKF->mnId;
 
-            const int nIDi = pKF->mnId;
+            g2o::Sim3 Sjw;
 
-            g2o::Sim3 Swi;
+            LoopClosing::KeyFrameAndPose::const_iterator itj = NonCorrectedSim3.find(pParentKF);
 
-            LoopClosing::KeyFrameAndPose::const_iterator iti = NonCorrectedSim3.find(pKF);
-
-            if(iti!=NonCorrectedSim3.end())
-                Swi = (iti->second).inverse();
+            if(itj!=NonCorrectedSim3.end())
+                Sjw = itj->second;
             else
-                Swi = vScw[nIDi].inverse();
+                Sjw = vScw[nIDj];
 
-            KeyFrame* pParentKF = pKF->GetParent();
+            g2o::Sim3 Sji = Sjw * Swi;
 
-            // Spanning tree edge
-            if(pParentKF)
-            {
-                int nIDj = pParentKF->mnId;
+            g2o::EdgeSim3* e = new g2o::EdgeSim3();
+            e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(nIDj)));
+            e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(nIDi)));
+            e->setMeasurement(Sji);
 
-                g2o::Sim3 Sjw;
-
-                LoopClosing::KeyFrameAndPose::const_iterator itj = NonCorrectedSim3.find(pParentKF);
-
-                if(itj!=NonCorrectedSim3.end())
-                    Sjw = itj->second;
-                else
-                    Sjw = vScw[nIDj];
-
-                g2o::Sim3 Sji = Sjw * Swi;
-
-                g2o::EdgeSim3* e = new g2o::EdgeSim3();
-                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(nIDj)));
-                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(nIDi)));
-                e->setMeasurement(Sji);
-
-                e->information() = matLambda;
-                optimizer.addEdge(e);
-            }
+            e->information() = matLambda;
+            optimizer.addEdge(e);
+        }
 
             // Loop edges
             const set<KeyFrame*> sLoopEdges = pKF->GetLoopEdges();
@@ -961,27 +961,27 @@ namespace ORB_SLAM2
                     if(sInsertedEdges.count(make_pair(min(pKF->mnId,pKFn->mnId),max(pKF->mnId,pKFn->mnId))))
                         continue;
 
-                        g2o::Sim3 Snw;
+                    g2o::Sim3 Snw;
 
                         LoopClosing::KeyFrameAndPose::const_iterator itn = NonCorrectedSim3.find(pKFn);
 
-                        if(itn!=NonCorrectedSim3.end())
-                            Snw = itn->second;
-                        else
-                            Snw = vScw[pKFn->mnId];
+                    if(itn!=NonCorrectedSim3.end())
+                        Snw = itn->second;
+                    else
+                        Snw = vScw[pKFn->mnId];
 
-                        g2o::Sim3 Sni = Snw * Swi;
+                    g2o::Sim3 Sni = Snw * Swi;
 
-                        g2o::EdgeSim3* en = new g2o::EdgeSim3();
-                        en->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKFn->mnId)));
-                        en->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(nIDi)));
-                        en->setMeasurement(Sni);
-                        en->information() = matLambda;
-                        optimizer.addEdge(en);
-                    }
+                    g2o::EdgeSim3* en = new g2o::EdgeSim3();
+                    en->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKFn->mnId)));
+                    en->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(nIDi)));
+                    en->setMeasurement(Sni);
+                    en->information() = matLambda;
+                    optimizer.addEdge(en);
                 }
             }
         }
+    }
 
         // Optimize!
         optimizer.initializeOptimization();

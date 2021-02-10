@@ -129,43 +129,43 @@ template void Map::load<boost::archive::binary_iarchive>(
 	boost::archive::binary_iarchive &,
 	const unsigned int);
 
-    void Map::AddKeyFrame(KeyFrame *pKF)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspKeyFrames.insert(pKF);
-        if(pKF->mnId>mnMaxKFid)
-            mnMaxKFid=pKF->mnId;
-    }
+void Map::AddKeyFrame(KeyFrame *pKF)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspKeyFrames.insert(pKF);
+    if(pKF->mnId>mnMaxKFid)
+        mnMaxKFid=pKF->mnId;
+}
 
-    void Map::AddMapPoint(MapPoint *pMP)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspMapPoints.insert(pMP);
-    }
+void Map::AddMapPoint(MapPoint *pMP)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspMapPoints.insert(pMP);
+}
 
-    void Map::EraseMapPoint(MapPoint *pMP)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspMapPoints.erase(pMP);
+void Map::EraseMapPoint(MapPoint *pMP)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspMapPoints.erase(pMP);
 
-        // TODO: This only erase the pointer.
-        // Delete the MapPoint
-    }
+    // TODO: This only erase the pointer.
+    // Delete the MapPoint
+}
 
-    void Map::EraseKeyFrame(KeyFrame *pKF)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mspKeyFrames.erase(pKF);
+void Map::EraseKeyFrame(KeyFrame *pKF)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspKeyFrames.erase(pKF);
 
-        // TODO: This only erase the pointer.
-        // Delete the MapPoint
-    }
+    // TODO: This only erase the pointer.
+    // Delete the MapPoint
+}
 
-    void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
-    {
-        unique_lock<mutex> lock(mMutexMap);
-        mvpReferenceMapPoints = vpMPs;
-    }
+void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mvpReferenceMapPoints = vpMPs;
+}
 
 vector<KeyFrame*> Map::GetAllKeyFrames()
 {
