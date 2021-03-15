@@ -151,6 +151,10 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 	{
 		window_name = "NEW PNP";
 	}
+    else if (pnp_version == 2)
+	{
+		window_name = "ONLY PNP";
+	}
     mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile, bReuse, window_name);
     if(bUseViewer)
         mptViewer = new thread(&Viewer::Run, mpViewer);

@@ -139,6 +139,7 @@ protected:
 
     bool Relocalization();
 	bool RelocalizationNewPnP();
+	bool RelocalizationOnlyPnP();
 
     void UpdateLocalMap();
     void UpdateLocalPoints();
